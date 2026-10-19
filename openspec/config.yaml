@@ -1,0 +1,64 @@
+schema: spec-driven
+
+context: |
+  Явное исключение от 2026-10-19: пользователь разрешил агенту самостоятельно отлаживать
+  первую версию add-portable-codex-chat-ui, включая игру, живой backend и UI-проверки.
+  Исключение имеет приоритет над общими правилами ниже и не распространяется на будущие версии.
+  Интерфейс встраивается в родной игровой чат; первый запрос сам создаёт диалог.
+  Правило пользователя: все runtime-проверки выполняет пользователь самостоятельно.
+  Агент не запускает Minecraft, приложение или живой backend для проверки поведения,
+  не проводит ручные smoke/E2E/визуальные проверки, не автоматизирует UI и не снимает
+  скриншоты для приёмки без нового прямого запроса пользователя.
+  Не включать такие действия в планы и tasks агента и не считать их отсутствие
+  блокером реализации. Не подменять их задачей на подготовку обязательного чеклиста.
+  Агент может выполнять сборку, статический анализ и изолированные автоматические
+  тесты на fake backend/fixtures без живого приложения и сервисов.
+  Runtime-результаты фиксировать по сообщениям пользователя либо наблюдениям в явно разрешённой отладке; не объявлять
+  непроверенное поведение или совместимость проверенными.
+
+rules:
+  proposal:
+    - Runtime-приёмка принадлежит пользователю; не обещать её выполнение агентом.
+  design:
+    - Отделять сборку и изолированные автоматические тесты от runtime-проверок пользователя.
+    - Не требовать от агента запуска приложения, UI-автоматизации, smoke/E2E в живом окружении или скриншотов.
+  tasks:
+    - Не создавать агенту задачи на runtime-проверки, запуск игры/живого backend, ручной smoke/E2E, UI-автоматизацию и сбор скриншотов.
+    - Проверки поведения агентом формулировать только как изолированные тесты на fake backend/fixtures; runtime-приёмку выполняет пользователь вне tasks агента.
+
+operations:
+  apply:
+    guidance:
+      - Runtime-проверки выполняет пользователь. Не запускать игру, живое приложение/backend, UI-автоматизацию или сбор скриншотов без нового прямого запроса.
+      - Продолжать реализацию и допустимые изолированные проверки; отсутствие runtime-приёмки не является блокером работы агента.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

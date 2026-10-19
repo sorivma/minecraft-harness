@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "item": {
+        "content": [],
+        "id": "fixture",
+        "type": "userMessage"
+      },
+      "turnId": "fixture"
+    }
+  ]
+}

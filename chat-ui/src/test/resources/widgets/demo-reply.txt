@@ -1,0 +1,128 @@
+Here are all 10 Minecraft widgets. These are **illustrative demos for Minecraft 1.7.10**, not readings from your world. They’re display-only snapshots.
+
+**1. Materials list**
+
+```minecraftharness:materials-v1
+Example building supplies
+source|estimated
+minecraft:planks|Oak planks|0|64|?|64
+minecraft:glass|Glass|0|16|?|64
+minecraft:torch|Torches|0|8|?|64
+```
+
+**2. Layer diagram**
+
+A proposed 5×5 foundation, viewed from above.
+
+```minecraftharness:layer-v1
+Example foundation
+source|estimated
+layer|64|top
+legend|S|minecraft:stone|Stone|0
+legend|P|minecraft:planks|Oak planks|0
+row|SSSSS
+row|SPPPS
+row|SPPPS
+row|SPPPS
+row|SSSSS
+```
+
+**3. Shaped crafting recipe**
+
+Four planks in a square make a crafting table.
+
+```minecraftharness:crafting-v1
+Crafting table
+minecraft:crafting_table|Crafting table|1|0
+minecraft:planks|Oak planks|1|0
+minecraft:planks|Oak planks|1|0
+-
+minecraft:planks|Oak planks|1|0
+minecraft:planks|Oak planks|1|0
+-
+-
+-
+-
+```
+
+**4. Shapeless crafting recipe**
+
+One oak log makes four oak planks.
+
+```minecraftharness:shapeless-v1
+Log to planks
+source|estimated
+output|minecraft:planks|Oak planks|0|4
+input|minecraft:log|Oak log|0|1
+```
+
+**5. Machine recipe**
+
+A vanilla furnace smelting example; fuel is required separately.
+
+```minecraftharness:machine-v1
+Smelt iron
+source|estimated
+machine|Furnace|10 s|Fuel required
+input|minecraft:iron_ore|Iron ore|0|1
+output|minecraft:iron_ingot|Iron ingot|0|1
+```
+
+**6. Production chain**
+
+Dependencies show which earlier step supplies the next.
+
+```minecraftharness:chain-v1
+Logs to crafting table
+source|estimated
+step|Craft 1 oak log into 4 planks|minecraft:planks|Oak planks|0|4|-
+step|Craft 4 planks into 1 crafting table|minecraft:crafting_table|Crafting table|0|1|1
+```
+
+**7. Comparison**
+
+```minecraftharness:comparison-v1
+Building material comparison
+source|estimated
+item|minecraft:planks|Oak planks|0
+item|minecraft:cobblestone|Cobblestone|0
+stat|Appearance|Warm wood grain|Rough grey stone
+stat|Flammable|Yes|No
+stat|Suitable mining tool|Axe|Pickaxe
+```
+
+**8. Production balance**
+
+Hypothetical rates demonstrate a supply bottleneck.
+
+```minecraftharness:production-v1
+Example factory balance
+source|estimated
+unit|items/min
+resource|Iron ingots|30|60|?
+resource|Oak planks|80|40|?
+```
+
+**9. Waypoint**
+
+Example coordinates only—not a discovered location.
+
+```minecraftharness:waypoint-v1
+Example meeting point
+source|estimated
+location|Overworld|0|64|0
+note|Illustrative coordinates only; terrain and safety have not been checked
+```
+
+**10. Progression checklist**
+
+A sample plan with dependencies; nothing is marked completed.
+
+```minecraftharness:progression-v1
+Example starter progression
+source|estimated
+todo|Gather an oak log|-
+todo|Craft four oak planks|1
+todo|Craft a crafting table|2
+todo|Place the crafting table|3
+```

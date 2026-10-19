@@ -1,0 +1,10 @@
+{
+  "message": "fixture",
+  "mode": "form",
+  "requestedSchema": {
+    "properties": {},
+    "type": "object"
+  },
+  "serverName": "fixture",
+  "threadId": "fixture"
+}

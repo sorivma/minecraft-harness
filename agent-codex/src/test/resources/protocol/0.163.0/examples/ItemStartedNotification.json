@@ -1,0 +1,10 @@
+{
+  "item": {
+    "content": [],
+    "id": "fixture",
+    "type": "userMessage"
+  },
+  "startedAtMs": 0,
+  "threadId": "fixture",
+  "turnId": "fixture"
+}

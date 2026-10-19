@@ -1,0 +1,15 @@
+.gradle/
+**/build/
+run/
+.tools/
+.idea/
+*.iml
+**/logs/
+*.log
+__pycache__/
+.venv/
+node_modules/
+.env
+.env.*
+!.env.example
+.codex/config.toml

@@ -1,0 +1,101 @@
+{
+  "version": "codex-cli 0.163.0",
+  "origin": "synthetic examples from local generated schemas",
+  "fixtures": [
+    {
+      "schema": "schemas/ModelListResponse.json",
+      "example": "examples/ModelListResponse.json",
+      "sha256": "d47b72c28f63e68aa6ae68850805934cedce21c978a96c3e3e94904ba2dc42c4"
+    },
+    {
+      "schema": "schemas/ThreadListResponse.json",
+      "example": "examples/ThreadListResponse.json",
+      "sha256": "465a3319a8062099caf6ea949538fbb7e202f955b5a98b042cf8d58262e9b7c2"
+    },
+    {
+      "schema": "schemas/ThreadTurnsListResponse.json",
+      "example": "examples/ThreadTurnsListResponse.json",
+      "sha256": "4f297621593bb1c3fe372d0d1c9286d6a4f6758a59cfccd6ffee75c6f065c7b4"
+    },
+    {
+      "schema": "schemas/ThreadItemsListResponse.json",
+      "example": "examples/ThreadItemsListResponse.json",
+      "sha256": "bddb6a417ba5464632188625fb6cf29fc77fa95bc2671463b3aabc3caeda753e"
+    },
+    {
+      "schema": "schemas/TurnStartParams.json",
+      "example": "examples/TurnStartParams.json",
+      "sha256": "6414e47309de4de726b749d4d7fde62eee24d8e89301f7488ba217da0841b3c5"
+    },
+    {
+      "schema": "schemas/TurnSteerParams.json",
+      "example": "examples/TurnSteerParams.json",
+      "sha256": "ebcd27622ef7800f787257eaf05cce4d61966c593999e4315c414ffc636afbe1"
+    },
+    {
+      "schema": "schemas/ItemStartedNotification.json",
+      "example": "examples/ItemStartedNotification.json",
+      "sha256": "3489d74c1669a066a028fc5ad38bf6d9c58264cca83f38ae4f54430e23521f5d"
+    },
+    {
+      "schema": "schemas/ItemCompletedNotification.json",
+      "example": "examples/ItemCompletedNotification.json",
+      "sha256": "f3270b6e036e33a28d2eb7e17de586227aa1a580198e4081f8e48dbf67916edf"
+    },
+    {
+      "schema": "schemas/AgentMessageDeltaNotification.json",
+      "example": "examples/AgentMessageDeltaNotification.json",
+      "sha256": "7d31f1c02f752a917b6631ce82683e7e090a1b13265af37c1432422c3d8ba312"
+    },
+    {
+      "schema": "schemas/TurnCompletedNotification.json",
+      "example": "examples/TurnCompletedNotification.json",
+      "sha256": "f9aa0696112ad491f6df67646683ffab9b23bf22bb9152ab8fafcb1db59752a0"
+    },
+    {
+      "schema": "schemas/CommandExecutionRequestApprovalParams.json",
+      "example": "examples/CommandExecutionRequestApprovalParams.json",
+      "sha256": "9920b7db501aa741294e53e9cf40d7edd1fc743bd37a9f0a53375533ce6b32b1"
+    },
+    {
+      "schema": "schemas/CommandExecutionRequestApprovalResponse.json",
+      "example": "examples/CommandExecutionRequestApprovalResponse.json",
+      "sha256": "30e3ff20b8ad00d74d033b3d0992c75072520993aa8feff9e8a4d08b8015e410"
+    },
+    {
+      "schema": "schemas/FileChangeRequestApprovalParams.json",
+      "example": "examples/FileChangeRequestApprovalParams.json",
+      "sha256": "251ef5b4a049e418d744e045e4f4b0e5f653d292f375fccfa6b5bb068d10041d"
+    },
+    {
+      "schema": "schemas/FileChangeRequestApprovalResponse.json",
+      "example": "examples/FileChangeRequestApprovalResponse.json",
+      "sha256": "9424a1d73f566a3662ae4a083f106da8f0dc9649c895c758dd91eced77f906d1"
+    },
+    {
+      "schema": "schemas/ToolRequestUserInputParams.json",
+      "example": "examples/ToolRequestUserInputParams.json",
+      "sha256": "fe074e2acfbff90b4bd3b4a707e53a38296102c4e68f36624611f245f8a8b282"
+    },
+    {
+      "schema": "schemas/ToolRequestUserInputResponse.json",
+      "example": "examples/ToolRequestUserInputResponse.json",
+      "sha256": "828abe5a8d60183c3335bef997e09f5382bb347f208be80b27062da8054f9989"
+    },
+    {
+      "schema": "schemas/McpServerElicitationRequestParams.json",
+      "example": "examples/McpServerElicitationRequestParams.json",
+      "sha256": "588aefc38af17bcc2c022103aaecb13ea51cb92ca855f56d041f48bcc9e86984"
+    },
+    {
+      "schema": "schemas/McpServerElicitationRequestResponse.json",
+      "example": "examples/McpServerElicitationRequestResponse.json",
+      "sha256": "f23749b186352b84b489a13375e76d1e105a0b4ee1a62a41496e0c124298bf36"
+    },
+    {
+      "schema": "schemas/ServerRequestResolvedNotification.json",
+      "example": "examples/ServerRequestResolvedNotification.json",
+      "sha256": "ae2bcd406b937d56500c45e132e4f720efd08c6b7d95e02a89f28c156305011d"
+    }
+  ]
+}

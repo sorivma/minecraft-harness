@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "cliVersion": "fixture",
+      "createdAt": 0,
+      "cwd": "fixture",
+      "ephemeral": false,
+      "id": "fixture",
+      "modelProvider": "fixture",
+      "preview": "fixture",
+      "projectId": null,
+      "sessionId": "fixture",
+      "source": "cli",
+      "status": {
+        "type": "notLoaded"
+      },
+      "turns": [],
+      "updatedAt": 0
+    }
+  ]
+}
