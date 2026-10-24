@@ -30,11 +30,13 @@ public final class WorkspaceController implements Closeable {
         public final long id;
         public final Message message;
         public final Settings settings;
+        public final boolean steer;
 
-        Queued(long id, Message message, Settings settings) {
+        Queued(long id, Message message, Settings settings, boolean steer) {
             this.id = id;
             this.message = message;
             this.settings = settings;
+            this.steer = steer;
         }
     }
 
@@ -51,6 +53,14 @@ public final class WorkspaceController implements Closeable {
         public String error = "", historyCursor;
         public boolean historyLoaded, historyLoading, submitting, loaded, queuePaused;
         public int unread;
+        public long startedNanos;
+        private boolean steering;
+
+        public long elapsedSeconds() {
+            return startedNanos == 0
+                    ? 0
+                    : Math.max(0, (System.nanoTime() - startedNanos) / 1_000_000_000L);
+        }
 
         Chat(Conversation c, UiStateStore.State ui) {
             conversation = c;
@@ -66,7 +76,9 @@ public final class WorkspaceController implements Closeable {
         }
 
         public boolean needsAnswer() {
-            for (Pending p : requests.values()) if (p.status == Pending.Status.OPEN) return true;
+            for (Pending p : requests.values())
+                if (p.status == Pending.Status.OPEN || p.status == Pending.Status.SENDING)
+                    return true;
             return false;
         }
     }
@@ -300,20 +312,11 @@ public final class WorkspaceController implements Closeable {
     public CompletableFuture<Void> submit(Chat chat, Message message, boolean steer) {
         BackendState state = owner(chat);
         if (!state.ready || !chat.loaded) return failed("Connect and open this conversation first");
-        if (steer && chat.busy()) {
-            if (state.capabilities == null
-                    || !state.capabilities.feature(Feature.STEER).available
-                    || chat.turn == null) return failed("Steering is unavailable");
-            return state.backend
-                    .steer(chat.conversation.key, chat.turn.id, message)
-                    .whenComplete(
-                            (r, e) -> {
-                                if (e == null) accepted(chat, message);
-                                else chat.error = error(e);
-                            });
-        }
-        if (chat.busy() || slotsUsed(state) >= maxTurns(state)) {
-            chat.queue.add(new Queued(++queuedSequence, message, chat.ui.settings));
+        if (chat.busy()
+                || chat.steering
+                || !chat.queue.isEmpty()
+                || slotsUsed(state) >= maxTurns(state)) {
+            chat.queue.add(new Queued(++queuedSequence, message, chat.ui.settings, steer));
             accepted(chat, message);
             schedule(chat);
             return CompletableFuture.completedFuture(null);
@@ -330,6 +333,7 @@ public final class WorkspaceController implements Closeable {
 
     private CompletableFuture<Void> send(Chat chat, Message message, Settings settings) {
         chat.submitting = true;
+        chat.startedNanos = System.nanoTime();
         chat.error = "";
         chat.runningSettings = settings;
         return owner(chat)
@@ -587,6 +591,8 @@ public final class WorkspaceController implements Closeable {
                 chat.timeline.delta(e.itemId, e.delta);
                 break;
             case TURN:
+                if (chat.startedNanos == 0 || chat.turn != null && !chat.turn.id.equals(e.turn.id))
+                    chat.startedNanos = System.nanoTime();
                 chat.turn = e.turn;
                 if (!chat.busy()) schedule(chat);
                 break;
@@ -632,9 +638,10 @@ public final class WorkspaceController implements Closeable {
         if (closed || backends.isEmpty()) return 0;
         List<BackendState> list = new ArrayList<BackendState>(backends.values());
         int count = 0;
-        for (int i = 0; i < list.size() && count < budget; i++) {
+        int eventBudget = Math.max(0, budget - (runnable.isEmpty() ? 0 : 1));
+        for (int i = 0; i < list.size() && count < eventBudget; i++) {
             BackendState b = list.get((pumpIndex + i) % list.size());
-            count += b.backend.pump(Math.min(32, budget - count));
+            count += b.backend.pump(Math.min(32, eventBudget - count));
         }
         pumpIndex = (pumpIndex + 1) % list.size();
         int attempts = Math.min(runnable.size(), Math.max(0, budget - count));
@@ -643,6 +650,36 @@ public final class WorkspaceController implements Closeable {
             scheduled.remove(chat);
             count++;
             if (chat.queue.isEmpty() || chat.queuePaused || !owner(chat).ready) continue;
+            if (chat.steering) {
+                schedule(chat);
+                continue;
+            }
+            Queued head = chat.queue.get(0);
+            if (head.steer
+                    && chat.busy()
+                    && !chat.submitting
+                    && chat.turn != null
+                    && !chat.needsAnswer()
+                    && !chat.steering
+                    && owner(chat).capabilities != null
+                    && owner(chat).capabilities.feature(Feature.STEER).available) {
+                chat.steering = true;
+                owner(chat)
+                        .backend
+                        .steer(chat.conversation.key, chat.turn.id, head.message)
+                        .whenComplete(
+                                (r, e) -> {
+                                    chat.steering = false;
+                                    if (e == null) chat.queue.remove(head);
+                                    else {
+                                        chat.queuePaused = true;
+                                        chat.error =
+                                                "Followup retained; retry the queue: " + error(e);
+                                    }
+                                    schedule(chat);
+                                });
+                continue;
+            }
             if (chat.busy() || slotsUsed(owner(chat)) >= maxTurns(owner(chat))) {
                 schedule(chat);
                 continue;

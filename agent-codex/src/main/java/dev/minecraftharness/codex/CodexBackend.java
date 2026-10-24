@@ -357,7 +357,8 @@ public final class CodexBackend implements AgentBackend {
         JsonObject p = params("cwd", connection.workspace);
         p.addProperty("sandbox", "workspace-write");
         p.addProperty("approvalPolicy", "on-request");
-        p.addProperty("developerInstructions", widgetInstructions);
+        p.addProperty("developerInstructions", instructions());
+        p.add("dynamicTools", questionTools());
         put(p, "model", settings.model);
         put(p, "serviceTier", settings.tier);
         return call("thread/start", p).thenApply(r -> conversation(object(r, "thread"), r, false));
@@ -368,10 +369,29 @@ public final class CodexBackend implements AgentBackend {
                 () -> {
                     JsonObject p = scope(thread);
                     p.addProperty("excludeTurns", true);
-                    p.addProperty("developerInstructions", widgetInstructions);
+                    p.addProperty("developerInstructions", instructions());
                     return call("thread/resume", p)
                             .thenApply(r -> conversation(object(r, "thread"), r, false));
                 });
+    }
+
+    private String instructions() {
+        return widgetInstructions
+                + "\nUse ask_questions when you need input from the player. "
+                + "It is available in normal work mode as well as planning. "
+                + "Followup player messages received while working refine the current task; incorporate them at the next step.";
+    }
+
+    private JsonArray questionTools() {
+        try (Reader reader =
+                new InputStreamReader(
+                        CodexBackend.class.getResourceAsStream("/ask_questions.json"), "UTF-8")) {
+            JsonArray tools = new JsonArray();
+            tools.add(new JsonParser().parse(reader));
+            return tools;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public CompletableFuture<Page<Item>> history(ThreadKey thread, String cursor) {

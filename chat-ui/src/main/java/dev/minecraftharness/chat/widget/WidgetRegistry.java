@@ -70,6 +70,16 @@ public final class WidgetRegistry {
                 failed = true;
             }
         }
+
+        /** Isolates a failing extension action just like a failing renderer. */
+        public void invoke(Runnable callback) {
+            if (failed) return;
+            try {
+                callback.run();
+            } catch (RuntimeException e) {
+                failed = true;
+            }
+        }
     }
 
     public static final class Part {
@@ -155,9 +165,9 @@ public final class WidgetRegistry {
     public synchronized String instructions() {
         StringBuilder out =
                 new StringBuilder(
-                        "You can show display-only widgets in assistant replies using fenced code blocks. The fence language is the exact registered widget ID. Put explanatory prose outside blocks. Only use the registered formats below; never invent IDs. Multiple widgets are allowed (up to 16 per message).\n");
+                        "You can show widgets in assistant replies using fenced code blocks. The fence language is the exact registered widget ID. Put explanatory prose outside blocks. Only use the registered formats below; never invent IDs. Multiple widgets are allowed (up to 16 per message). Parsing text never executes actions; extension buttons require an explicit user click.\n");
         out.append(
-                "For a build guide, compose materials, layer diagrams, recipes and a progression checklist in that order in one reply, with numbered titles. Keep within the message and widget limits; split large guides across replies. Widgets are immutable snapshots, not live tracking or clickable actions.\n");
+                "For a build guide, compose materials, layer diagrams, recipes and a progression checklist in that order in one reply, with numbered titles. Keep within the message and widget limits; split large guides across replies. Built-in planning widgets are immutable snapshots. Only use live controls when an extension explicitly documents them.\n");
         for (Definition d : definitions.values())
             if (d.id.contains(":"))
                 out.append("\nWidget ")

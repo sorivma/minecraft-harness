@@ -1,8 +1,8 @@
 package dev.minecraftharness.chat.widget;
 
 /**
- * A display-only widget instance. Instances belong to one parsed message; never retain world state
- * globally.
+ * A widget instance. Instances belong to one parsed message. Extensions may attach explicit
+ * user-action callbacks through WidgetCanvas; parsing and rendering must not execute actions.
  */
 public interface Widget {
     String title();

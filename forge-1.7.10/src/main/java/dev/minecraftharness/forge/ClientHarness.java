@@ -3,12 +3,16 @@ package dev.minecraftharness.forge;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.ReflectionHelper;
+import dev.minecraftharness.agent.McpServer;
 import dev.minecraftharness.chat.ChatPanel;
 import dev.minecraftharness.chat.widget.WidgetRegistry;
 import dev.minecraftharness.codex.CodexBackend;
+import dev.minecraftharness.codex.CodexWorkspaceConfig;
 import dev.minecraftharness.core.*;
 import java.io.*;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
 import net.minecraft.server.integrated.IntegratedServer;
@@ -19,6 +23,8 @@ public final class ClientHarness {
     public static WorkspaceController session;
     public static ChatPanel panel;
     public static String unavailable = "Open a local world first";
+    public static List<McpServer> mcpServers = Collections.emptyList();
+    public static String configurationError;
     private File worldRoot;
     private IntegratedServer server;
     private boolean attempted;
@@ -44,13 +50,19 @@ public final class ClientHarness {
             if (root != null) {
                 attempted = true;
                 try {
+                    if (configurationError != null) throw new IOException(configurationError);
                     worldRoot = root.getCanonicalFile();
+                    File workspace = WorldWorkspace.open(worldRoot);
+                    CodexWorkspaceConfig.write(workspace, mcpServers);
                     WidgetRegistry widgets = HarnessWidgets.snapshot();
                     session =
                             new WorkspaceController(
-                                    WorldWorkspace.open(worldRoot),
+                                    workspace,
                                     Arrays.asList(
-                                            new CodexBackend(executable, widgets.instructions())));
+                                            new CodexBackend(
+                                                    CodexWorkspaceConfig.command(
+                                                            executable, workspace),
+                                                    widgets.instructions())));
                     panel = new ChatPanel(session, widgets);
                     unavailable = "";
                 } catch (IOException e) {

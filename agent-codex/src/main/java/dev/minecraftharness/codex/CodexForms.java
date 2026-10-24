@@ -11,6 +11,23 @@ final class CodexForms {
     private CodexForms() {}
 
     static Form request(String method, JsonObject p) {
+        if (method.equals("item/tool/call")) {
+            if (!text(p, "tool").equals("ask_questions") || !text(p, "namespace").isEmpty())
+                throw unavailable("Unknown client tool");
+            JsonObject questions = object(p, "arguments");
+            if (array(questions, "questions").size() > 3)
+                throw unavailable("Ask at most three questions");
+            Set<String> ids = new HashSet<String>();
+            for (JsonElement e : array(questions, "questions")) {
+                JsonObject q = e.getAsJsonObject();
+                if (text(q, "id").trim().isEmpty()
+                        || text(q, "question").trim().isEmpty()
+                        || !ids.add(text(q, "id")))
+                    throw unavailable("Questions need unique ids and text");
+                q.addProperty("isOther", true);
+            }
+            return request("item/tool/requestUserInput", questions);
+        }
         if (method.equals("item/commandExecution/requestApproval")
                 || method.equals("item/fileChange/requestApproval"))
             return new Form(
@@ -140,6 +157,15 @@ final class CodexForms {
     }
 
     static JsonObject answer(String method, Map<String, Value> fields) {
+        if (method.equals("item/tool/call")) {
+            JsonObject out = new JsonObject(), content = params("type", "inputText");
+            content.addProperty("text", answer("item/tool/requestUserInput", fields).toString());
+            JsonArray items = new JsonArray();
+            items.add(content);
+            out.add("contentItems", items);
+            out.addProperty("success", true);
+            return out;
+        }
         if (method.equals("item/tool/requestUserInput")) {
             JsonObject out = new JsonObject(), answers = new JsonObject();
             for (Map.Entry<String, Value> e : fields.entrySet()) {

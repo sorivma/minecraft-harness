@@ -13,6 +13,45 @@ import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 public class ChatPanelTest {
+    @Test
+    public void questionOptionsAllowSelectionThenCustomTextWithoutSendingImplicitly() {
+        Request question =
+                new Request(
+                        new RequestKey(core.selected().conversation.key, "custom-question"),
+                        "turn",
+                        "tool",
+                        "Choose material",
+                        "",
+                        new Form(
+                                Arrays.asList(
+                                        new Form.Field(
+                                                "material",
+                                                "Material",
+                                                "Choose or type your own",
+                                                Form.Type.TEXT,
+                                                true,
+                                                Arrays.asList("Stone", "Wood"),
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null))));
+        backend.emit(Event.request(question));
+        drain();
+        draw();
+        click("request");
+        assertEquals("", panel.overlay());
+        click("question:option:0");
+        click("question:custom");
+        assertEquals(0, backend.answers);
+        click("question:material");
+        panel.key(ChatPanel.Key.END, '\0', false, false);
+        text(" bricks");
+        draw();
+        assertTrue(surface.drawn.toString().contains("Stone bricks"));
+        assertEquals(0, backend.answers);
+    }
+
     @Rule public TemporaryFolder temp = new TemporaryFolder();
     private WorkspaceController core;
     private FakeBackend backend;
@@ -58,6 +97,64 @@ public class ChatPanelTest {
 
     private void text(String s) {
         for (char c : s.toCharArray()) panel.key(ChatPanel.Key.OTHER, c, false, false);
+    }
+
+    @Test
+    public void extensionButtonsInvokeOnlyOnExplicitClicksInlineAndInDetails() {
+        int[] calls = {0};
+        dev.minecraftharness.chat.widget.WidgetRegistry registry =
+                new dev.minecraftharness.chat.widget.WidgetRegistry();
+        registry.register(
+                "example:actions",
+                "Two independent callbacks",
+                body ->
+                        new dev.minecraftharness.chat.widget.Widget() {
+                            public String title() {
+                                return "Actions";
+                            }
+
+                            public String plainText() {
+                                return "Toggle and increment";
+                            }
+
+                            public int height(int width) {
+                                return 28;
+                            }
+
+                            public boolean includesText() {
+                                return true;
+                            }
+
+                            public void render(
+                                    dev.minecraftharness.chat.widget.WidgetCanvas canvas) {
+                                canvas.button("toggle", "Toggle", 0, 0, 70, 20, () -> calls[0]++);
+                                canvas.button(
+                                        "other", "Other", 80, 0, 70, 20, () -> calls[0] += 10);
+                            }
+                        });
+        panel = new ChatPanel(core, registry);
+        core.selected()
+                .timeline
+                .snapshot(
+                        new Item(
+                                "actions",
+                                "turn",
+                                Kind.ASSISTANT,
+                                State.COMPLETED,
+                                "Agent",
+                                "```example:actions\npayload\n```",
+                                Collections.<String, Value>emptyMap(),
+                                Collections.<Resource>emptyList(),
+                                null));
+        draw();
+        assertEquals(0, calls[0]);
+        click("widget:actions:0:action:toggle");
+        assertEquals(1, calls[0]);
+        assertEquals("", panel.overlay());
+        click("item:actions");
+        assertNull(panel.controlBounds("widget:actions:0:action:toggle"));
+        click("detailWidget:action:other");
+        assertEquals(11, calls[0]);
     }
 
     @Test
@@ -190,6 +287,10 @@ public class ChatPanelTest {
                                 Collections.<Resource>emptyList(),
                                 null));
         draw();
+        for (int i = 0; i < 10 && !surface.drawn.contains("Crafting: Oak planks"); i++) {
+            panel.scroll(1);
+            draw();
+        }
         assertTrue(surface.drawn.contains("Crafting: Oak planks"));
         click("item:recipe");
         assertEquals("details", panel.overlay());
@@ -278,11 +379,11 @@ public class ChatPanelTest {
         drain();
         draw();
         click("request");
-        assertEquals("form", panel.overlay());
-        click("submitForm");
+        assertEquals("", panel.overlay());
+        click("question:submit");
         assertEquals(0, backend.answers);
-        click("field:material");
-        int[] bounds = panel.controlBounds("submitForm");
+        click("question:option:0");
+        int[] bounds = panel.controlBounds("question:submit");
         panel.click(bounds[0] + 1, bounds[1] + 1, 0);
         panel.click(bounds[0] + 1, bounds[1] + 1, 0);
         drain();
@@ -435,9 +536,9 @@ public class ChatPanelTest {
     }
 
     @Test
-    public void compactSingleCardScrollCanReachMiddleAnswer() {
+    public void compactLayoutShowsSeveralShortRepliesAndCanReachOlderOnes() {
         Chat chat = core.selected();
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 10; i++)
             chat.timeline.snapshot(
                     new Item(
                             "row-" + i,
@@ -450,19 +551,19 @@ public class ChatPanelTest {
                             Collections.<Resource>emptyList(),
                             null));
         draw();
-        assertEquals(1, panel.renderedItems);
-        panel.scroll(1);
-        draw();
-        assertEquals("row-1", chat.ui.anchor);
-        assertNotNull(panel.controlBounds("item:row-1"));
-        panel.scroll(1);
-        draw();
-        assertEquals("row-0", chat.ui.anchor);
-        panel.scroll(-1);
-        draw();
-        assertEquals("row-1", chat.ui.anchor);
-        panel.scroll(-1);
-        draw();
+        assertTrue(panel.renderedItems > 1);
+        Set<String> seen = new HashSet<String>();
+        for (int i = 0; i < 30; i++) {
+            for (int row = 0; row < 10; row++)
+                if (panel.controlBounds("item:row-" + row) != null) seen.add("row-" + row);
+            panel.scroll(1);
+            draw();
+        }
+        assertEquals(10, seen.size());
+        for (int i = 0; i < 30; i++) {
+            panel.scroll(-1);
+            draw();
+        }
         assertEquals("", chat.ui.anchor);
     }
 
@@ -486,18 +587,19 @@ public class ChatPanelTest {
         draw();
         Set<String> seen = new HashSet<String>(surface.drawn);
         for (int i = 0; i < 120; i++) {
-            panel.scroll(-1);
+            panel.scroll(1);
             draw();
             seen.addAll(surface.drawn);
             assertEquals("", panel.overlay());
         }
         for (int i = 0; i < 80; i++)
             assertTrue("Missing row " + i, seen.contains("READABLE-ROW-" + i));
+        assertTrue(surface.drawn.contains("READABLE-ROW-0"));
         for (int i = 0; i < 120; i++) {
-            panel.scroll(1);
+            panel.scroll(-1);
             draw();
         }
-        assertTrue(surface.drawn.contains("READABLE-ROW-0"));
+        assertTrue(surface.drawn.contains("READABLE-ROW-79"));
     }
 
     @Test

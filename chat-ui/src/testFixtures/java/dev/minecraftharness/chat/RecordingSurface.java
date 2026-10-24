@@ -4,6 +4,7 @@ import java.util.*;
 
 public final class RecordingSurface implements Surface {
     public final List<String> drawn = new ArrayList<String>();
+    public final List<Integer> colors = new ArrayList<Integer>();
     public final List<String> opened = new ArrayList<String>();
     public int rectangles, clips;
     public boolean closed, gameChat;
@@ -24,6 +25,7 @@ public final class RecordingSurface implements Surface {
 
     public void text(String text, int x, int y, int color) {
         drawn.add(text);
+        colors.add(color);
     }
 
     public void clip(int l, int t, int r, int b) {
@@ -57,6 +59,7 @@ public final class RecordingSurface implements Surface {
 
     public void reset() {
         drawn.clear();
+        colors.clear();
         rectangles = 0;
     }
 }

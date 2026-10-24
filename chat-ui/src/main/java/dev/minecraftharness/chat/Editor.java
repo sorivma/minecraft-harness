@@ -4,6 +4,25 @@ package dev.minecraftharness.chat;
 public final class Editor {
     public String text;
     public int cursor, mark;
+    private final java.util.Deque<Editor> undo = new java.util.ArrayDeque<Editor>();
+    private final java.util.Deque<Editor> redo = new java.util.ArrayDeque<Editor>();
+
+    public void place(int position, boolean selecting) {
+        cursor = boundary(Math.max(0, Math.min(text.length(), position)));
+        if (!selecting) mark = cursor;
+    }
+
+    public void undo(boolean forward) {
+        java.util.Deque<Editor> source = forward ? redo : undo, target = forward ? undo : redo;
+        if (source.isEmpty()) return;
+        Editor saved = new Editor(text, cursor);
+        saved.mark = mark;
+        target.push(saved);
+        Editor old = source.pop();
+        text = old.text;
+        cursor = old.cursor;
+        mark = old.mark;
+    }
 
     public Editor(String text, int cursor) {
         this.text = text;
@@ -27,6 +46,11 @@ public final class Editor {
     }
 
     public void insert(String value) {
+        Editor saved = new Editor(text, cursor);
+        saved.mark = mark;
+        undo.push(saved);
+        if (undo.size() > 100) undo.removeLast();
+        redo.clear();
         int start = Math.min(mark, cursor), end = Math.max(mark, cursor);
         text =
                 text.substring(0, start)

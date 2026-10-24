@@ -1,7 +1,7 @@
 # Adding widgets from another mod
 
 Minecraft Harness exposes a client-side Java extension interface, version 1.
-Mods can register new display widgets without modifying the harness, chat panel,
+Mods can register new widgets and explicit user actions without modifying the harness, chat panel,
 or Codex backend. The built-in crafting widget uses this same interface.
 
 The built-in [planning widgets](planning-widgets.md) also use this interface:
@@ -103,14 +103,44 @@ clipboard, navigation, or clip-stack operations. Return height zero to use only
 the text representation at a particular width. Heights above 4096 or below zero
 disable the visual. Inline widgets scroll through the viewport with the message. In the optional
 detail overlay, tall widgets scroll inside the available space; width-constrained
-widgets can return zero height to show text instead. Widgets currently display information; this interface does not
-dispatch clicks, craft items, run commands, or grant access to game tools.
+widgets can return zero height to show text instead.
+
+## Explicit action callbacks
+
+`WidgetCanvas.button` draws a button and registers a `Runnable` supplied by the installed
+Java extension. A callback can implement any extension-owned use case: change a local
+view, open another screen, update a model, or submit asynchronous work. Harness has no
+command vocabulary or action-type registry to extend. Closures can capture typed data
+and services; JSON/message payloads never contain executable callback names or classes.
+
+```java
+canvas.button("visibility", visible ? "Hide" : "Show", 0, 20, 80, 20,
+    () -> plans.setVisible(session, planId, revision, !visible));
+canvas.button("refresh", "Refresh", 90, 20, 80, 20, !loading,
+    () -> service.refreshAsync());
+```
+
+The overload with a boolean disables a button without registering its action. IDs must
+be unique within one widget render and match `[a-zA-Z0-9_.:-]{1,128}`. A render may
+register at most 64 buttons. Hit rectangles are intersected with both the canvas and
+the visible panel viewport, including detail scrolling. Controls are rebuilt on each
+frame. Action buttons take precedence over opening widget details. Buttons participate
+in the panel's existing focus/navigation controls as well as left-click dispatch.
+
+Parsing and drawing only register actions; they never execute them. A callback runs on
+the client/UI thread after an explicit click or keyboard activation. Keep it short and
+start slow work asynchronously. The extension must recheck session identity, resource
+existence, revisions and permissions in its callback; a saved message is not authority
+to operate on a new world. Runtime exceptions disable that widget's actions and visual,
+preserving its text. Trusted Java extensions remain responsible for their own logic.
+The canvas constructor without an action host is useful for display-only previews.
 
 All parser and rendering callbacks execute on the client thread. Keep them fast,
 non-blocking, and free of world mutations. Return fresh instances and keep them
 independent of current-world objects. The panel caches at most 32 parsed messages
 per session. Titles and fallback text are captured once; use immutable payload
-data rather than treating these widgets as live world subscriptions.
+data for titles and fallback text. An extension may explicitly document live read-only
+view data and user actions, provided it validates scope and handles unavailable services.
 
 ## Failure behavior and limits
 
@@ -133,3 +163,20 @@ supply `registry.instructions()` to its backend without depending on Minecraft.
 For tests, use `RecordingSurface` from the chat-ui test fixtures. The registry and
 panel tests include a custom gauge, multiple widgets, invalid payloads, renderer
 failures, limits, snapshots, and backward-compatible recipe rendering.
+
+## Native extension drawing
+
+`WidgetCanvas.custom(left, top, width, height, Drawing)` permits a trusted installed
+Java extension to render a native model. The drawing receives the original rectangle
+in absolute logical coordinates; the host region is intersected with the canvas and
+with existing chat/detail clips. `Surface.custom` defaults to false and never executes
+the callback on portable hosts, allowing extensions to draw a fallback. Completely
+clipped native regions skip the renderer.
+
+The Forge host saves attributes, client arrays and projection/texture/modelview matrices,
+clears depth only inside the clipped region, enables depth testing, and restores its
+state in finally even if the callback throws. Render synchronously on the client thread;
+do not mutate the game world or execute actions. Extensions own native resource caches,
+cleanup and restoration of any additional mod globals or texture units they modify.
+The API is generic and contains no Schematica dependency. Existing callbacks and widgets
+remain compatible; extensions using this method require a Harness build containing it.

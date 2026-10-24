@@ -12,6 +12,60 @@ import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 public class WorkspaceControllerTest {
+    @Test
+    public void followupDuringStartReachesRunningTurnWithoutWaitingForCompletion()
+            throws Exception {
+        FakeBackend b = new FakeBackend();
+        WorkspaceController c = new WorkspaceController(temp.newFolder(), Arrays.asList(b));
+        await(c, c.connect("fake"));
+        WorkspaceController.Chat chat = await(c, c.create("fake"));
+        CompletableFuture<Void> start = c.submit(chat, new Message("build"), true);
+        CompletableFuture<Void> followup = c.submit(chat, new Message("use stone"), true);
+        assertFalse(
+                "Followup must be retained while turn/start is pending",
+                followup.isCompletedExceptionally());
+        await(c, start);
+        // Finish the fake question to model a normal running step, not a user-input wait.
+        for (WorkspaceController.Pending p : chat.requests.values())
+            b.emit(Event.resolved(p.request.key));
+        drain(c);
+        assertEquals(Arrays.asList("use stone"), b.steered);
+        assertEquals(1, b.sends);
+        assertTrue(chat.queue.isEmpty());
+        c.close();
+    }
+
+    @Test
+    public void streamingEventsCannotStarveQueuedFollowupsAndOrderIsPreserved() throws Exception {
+        FakeBackend b = new FakeBackend();
+        AgentBackend streaming =
+                (AgentBackend)
+                        java.lang.reflect.Proxy.newProxyInstance(
+                                AgentBackend.class.getClassLoader(),
+                                new Class<?>[] {AgentBackend.class},
+                                (proxy, method, args) -> {
+                                    Object result = method.invoke(b, args);
+                                    // Simulate an event source that always consumes its entire pump
+                                    // allowance.
+                                    return method.getName().equals("pump") ? args[0] : result;
+                                });
+        WorkspaceController c = new WorkspaceController(temp.newFolder(), Arrays.asList(streaming));
+        await(c, c.connect("fake"));
+        WorkspaceController.Chat chat = await(c, c.create("fake"));
+        await(c, c.submit(chat, new Message("build"), true));
+        c.submit(chat, new Message("first"), true);
+        c.submit(chat, new Message("second"), true);
+        drain(c);
+        assertTrue("Questions must be answered before steering", b.steered.isEmpty());
+        for (WorkspaceController.Pending p : chat.requests.values())
+            b.emit(Event.resolved(p.request.key));
+        drain(c);
+        assertEquals(Arrays.asList("first", "second"), b.steered);
+        assertTrue(chat.queue.isEmpty());
+        assertEquals(1, b.sends);
+        c.close();
+    }
+
     @Rule public TemporaryFolder temp = new TemporaryFolder();
 
     private <T> T await(WorkspaceController c, CompletableFuture<T> f) {

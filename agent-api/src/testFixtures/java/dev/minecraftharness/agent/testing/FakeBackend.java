@@ -26,6 +26,7 @@ public final class FakeBackend implements AgentBackend {
     private final Map<RequestKey, Request> requests = new HashMap<RequestKey, Request>();
     public int answers;
     public int sends;
+    public final List<String> steered = new ArrayList<String>();
 
     public FakeBackend() {
         this("fake", 4);
@@ -315,6 +316,7 @@ public final class FakeBackend implements AgentBackend {
                 () -> {
                     valid(thread);
                     active(thread, turnId);
+                    steered.add(message.text);
                     return null;
                 });
     }

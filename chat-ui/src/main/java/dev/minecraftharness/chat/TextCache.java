@@ -14,29 +14,21 @@ final class TextCache {
 
     List<String> preview(Surface surface, String text, int width, int maxLines) {
         String bounded = text.length() > 512 ? text.substring(0, 512) : text;
+        if (!bounded.isEmpty() && Character.isHighSurrogate(bounded.charAt(bounded.length() - 1)))
+            bounded = bounded.substring(0, bounded.length() - 1);
         String key = width + ":" + maxLines + ":" + bounded;
         List<String> result = cache.get(key);
         if (result != null) return result;
-        result = new ArrayList<String>();
-        StringBuilder line = new StringBuilder();
-        for (int i = 0; i < bounded.length() && result.size() < maxLines; ) {
-            int point = bounded.codePointAt(i);
-            i += Character.charCount(point);
-            measuredCharacters++;
-            if (point == '\n') {
-                result.add(line.toString());
-                line.setLength(0);
-                continue;
-            }
-            String next = new String(Character.toChars(point));
-            if (surface.textWidth(line.toString() + next) > Math.max(1, width)
-                    && line.length() > 0) {
-                result.add(line.toString());
-                line.setLength(0);
-            }
-            if (result.size() < maxLines) line.append(next);
+        TextWindow page = new TextWindow(surface, bounded, 0, width, maxLines);
+        measuredCharacters += page.end;
+        result = new ArrayList<String>(page.lines);
+        if (result.isEmpty()) result.add("");
+        if (page.end < text.length()) {
+            String last = result.get(result.size() - 1);
+            while (!last.isEmpty() && surface.textWidth(last + "…") > width)
+                last = last.substring(0, last.offsetByCodePoints(last.length(), -1));
+            result.set(result.size() - 1, last + "…");
         }
-        if (result.size() < maxLines) result.add(line.toString());
         cache.put(key, result);
         return result;
     }

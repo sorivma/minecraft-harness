@@ -10,6 +10,26 @@ public final class Timeline {
     private final Map<String, Integer> positions = new HashMap<String, Integer>();
     private final Map<String, Long> changed = new HashMap<String, Long>();
     private long revision;
+    private final Deque<Change> changes = new ArrayDeque<Change>();
+
+    public static final class Change {
+        public final long revision;
+        public final int index;
+
+        Change(long revision, int index) {
+            this.revision = revision;
+            this.index = index;
+        }
+    }
+
+    /** Null means the reader must rebuild after history insertion or an expired change window. */
+    public List<Change> changesSince(long since) {
+        if (since == revision) return Collections.emptyList();
+        if (changes.isEmpty() || since < changes.peekFirst().revision - 1) return null;
+        List<Change> result = new ArrayList<Change>();
+        for (Change change : changes) if (change.revision > since) result.add(change);
+        return result;
+    }
 
     public long revision() {
         return revision;
@@ -36,6 +56,8 @@ public final class Timeline {
         } else items.set(index, item);
         revision++;
         changed.put(item.id, revision);
+        changes.addLast(new Change(revision, positions.get(item.id)));
+        if (changes.size() > 256) changes.removeFirst();
     }
 
     public void update(Item item) {
@@ -96,6 +118,7 @@ public final class Timeline {
         positions.clear();
         for (int i = 0; i < items.size(); i++) positions.put(items.get(i).id, i);
         revision++;
+        changes.clear();
         for (Item item : older) changed.put(item.id, revision);
     }
 }

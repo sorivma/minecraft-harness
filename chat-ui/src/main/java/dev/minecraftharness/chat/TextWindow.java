@@ -12,7 +12,7 @@ final class TextWindow {
         int i = Math.max(0, Math.min(start, text.length()));
         if (i > 0 && i < text.length() && Character.isLowSurrogate(text.charAt(i))) i--;
         while (lines.size() < rows && i < text.length()) {
-            int begin = i, pixels = 0;
+            int begin = i, pixels = 0, wordBreak = -1;
             while (i < text.length()) {
                 int point = text.codePointAt(i), size = Character.charCount(point);
                 if (point == '\n') {
@@ -20,9 +20,13 @@ final class TextWindow {
                     break;
                 }
                 int next = surface.textWidth(new String(Character.toChars(point)));
-                if (i > begin && pixels + next > Math.max(1, width)) break;
+                if (i > begin && pixels + next > Math.max(1, width)) {
+                    if (wordBreak > begin) i = wordBreak;
+                    break;
+                }
                 pixels += next;
                 i += size;
+                if (Character.isWhitespace(point)) wordBreak = i;
             }
             starts.add(begin);
             lines.add(text.substring(begin, i).replace("\n", ""));

@@ -9,6 +9,25 @@ import java.util.*;
 import org.junit.Test;
 
 public class RichFlowTest {
+    @Test
+    public void askQuestionsDynamicCallUsesInteractiveFormAndToolResponse() {
+        JsonObject call =
+                parse(
+                        "{\"tool\":\"ask_questions\",\"arguments\":{\"questions\":[{\"id\":\"material\",\"question\":\"Which material?\",\"options\":[{\"label\":\"Stone\",\"description\":\"Durable\"}]}]}}");
+        Form form = CodexForms.request("item/tool/call", call);
+        Map<String, Value> fields = Collections.singletonMap("material", Value.text("Stone"));
+        assertTrue(form.validate(fields).isEmpty());
+        JsonObject response = CodexForms.answer("item/tool/call", fields);
+        assertTrue(response.get("success").getAsBoolean());
+        assertTrue(
+                response.getAsJsonArray("contentItems")
+                        .get(0)
+                        .getAsJsonObject()
+                        .get("text")
+                        .getAsString()
+                        .contains("Stone"));
+    }
+
     private JsonObject parse(String json) {
         return new JsonParser().parse(json).getAsJsonObject();
     }

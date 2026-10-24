@@ -28,6 +28,7 @@ public class CodexBackendTest {
             System.setOut(new PrintStream(System.out, true, "UTF-8"));
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in, "UTF-8"));
             int sequence = 0, sends = 0;
+            boolean questionsRegistered = false;
             String line;
             while ((line = in.readLine()) != null) {
                 JsonObject message = new JsonParser().parse(line).getAsJsonObject();
@@ -46,6 +47,9 @@ public class CodexBackendTest {
                 else if (method.equals("thread/start")
                         || method.equals("thread/resume")
                         || method.equals("thread/fork")) {
+                    if (method.equals("thread/start"))
+                        questionsRegistered =
+                                Wire.array(p, "dynamicTools").toString().contains("ask_questions");
                     JsonObject thread =
                             Wire.params(
                                     "id",
@@ -118,6 +122,24 @@ public class CodexBackendTest {
                     event("mcpServer/startupStatus/updated", scope);
                     event("remoteControl/status/changed", new JsonObject());
                     event("turn/moderationMetadata", scope);
+                    if (p.toString().contains("ask-test")) {
+                        if (!questionsRegistered)
+                            throw new IllegalStateException("ask_questions was not registered");
+                        JsonObject question = Wire.params("method", "item/tool/call");
+                        question.addProperty("id", "question-call");
+                        JsonObject params = Wire.params("threadId", thread);
+                        params.addProperty("turnId", turn);
+                        params.addProperty("callId", "question-call");
+                        params.addProperty("tool", "ask_questions");
+                        params.add(
+                                "arguments",
+                                new JsonParser()
+                                        .parse(
+                                                "{\"questions\":[{\"id\":\"material\",\"question\":\"Which material?\"}]}"));
+                        question.add("params", params);
+                        output(question);
+                        continue;
+                    }
                     JsonObject request =
                             Wire.params("method", "item/commandExecution/requestApproval");
                     request.add("id", sends == 1 ? new JsonPrimitive(7) : new JsonPrimitive("7"));
@@ -136,6 +158,60 @@ public class CodexBackendTest {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    public void dynamicQuestionsRoundTripThroughServerRequestAndExplicitAnswer() throws Exception {
+        CodexBackend b = backend();
+        List<Event> events = new ArrayList<Event>();
+        try {
+            BackendScenarios.await(b, b.connect(new File("."), events::add));
+            Conversation chat = BackendScenarios.await(b, b.create(Settings.defaults()));
+            BackendScenarios.await(
+                    b, b.send(chat.key, new Message("ask-test"), Settings.defaults()));
+            long deadline = System.nanoTime() + 5_000_000_000L;
+            while (events.stream().noneMatch(e -> e.request != null)
+                    && System.nanoTime() < deadline) {
+                b.pump(32);
+                Thread.sleep(1);
+            }
+            Request question =
+                    events.stream().filter(e -> e.request != null).findFirst().get().request;
+            assertEquals("material", question.form.fields.get(0).id);
+            BackendScenarios.await(
+                    b,
+                    b.answer(
+                            question.key,
+                            Collections.singletonMap("material", Value.text("Stone"))));
+            deadline = System.nanoTime() + 5_000_000_000L;
+            while (events.stream()
+                            .noneMatch(e -> e.item != null && e.item.title.equals("test/answer"))
+                    && System.nanoTime() < deadline) {
+                b.pump(32);
+                Thread.sleep(1);
+            }
+            Item reply =
+                    events.stream()
+                            .filter(e -> e.item != null && e.item.title.equals("test/answer"))
+                            .findFirst()
+                            .get()
+                            .item;
+            Map<String, Value> result =
+                    reply.details.get("response").object().get("result").object();
+            assertTrue(result.get("success").bool());
+            assertTrue(
+                    result.get("contentItems")
+                            .array()
+                            .get(0)
+                            .object()
+                            .get("text")
+                            .text()
+                            .contains("Stone"));
+            assertTrue(events.stream().anyMatch(e -> e.type == EventType.REQUEST_RESOLVED));
+            assertFalse(events.stream().anyMatch(e -> e.type == EventType.WARNING));
+        } finally {
+            b.close();
         }
     }
 

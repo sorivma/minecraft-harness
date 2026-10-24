@@ -41,9 +41,21 @@ val verifyArchitecture by
                                 "Forbidden dependency: $name -> ${dependency.dependencyProject.name}"
                             }
                         } else if (name in setOf("agent-api", "core", "chat-ui")) {
-                            error(
+                            val markdown =
+                                name == "chat-ui" &&
+                                    dependency.group == "org.commonmark" &&
+                                    dependency.version == "0.21.0" &&
+                                    dependency.name in
+                                        setOf(
+                                            "commonmark",
+                                            "commonmark-ext-gfm-tables",
+                                            "commonmark-ext-gfm-strikethrough",
+                                            "commonmark-ext-task-list-items",
+                                            "commonmark-ext-autolink"
+                                        )
+                            check(markdown) {
                                 "Portable module $name has external production dependency ${dependency.group}:${dependency.name}"
-                            )
+                            }
                         }
                     }
                 }

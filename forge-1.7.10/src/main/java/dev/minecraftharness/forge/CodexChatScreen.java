@@ -11,6 +11,7 @@ import org.lwjgl.opengl.GL11;
 
 /** One native game-chat host; the agent tab consumes its own input before vanilla chat. */
 public final class CodexChatScreen extends GuiChat implements Surface {
+    private static final boolean SEPARATE_TEXT_EVENTS = ChatKeyboardInput.hasSeparateTextEvents();
     private final Deque<int[]> clips = new ArrayDeque<int[]>();
     private final net.minecraft.client.renderer.entity.RenderItem itemRenderer =
             new net.minecraft.client.renderer.entity.RenderItem();
@@ -25,6 +26,7 @@ public final class CodexChatScreen extends GuiChat implements Surface {
     public void initGui() {
         String draft = inputField == null ? null : inputField.getText();
         super.initGui();
+        inputField.width = Math.max(1, width - 60);
         if (draft != null) inputField.setText(draft);
         panel = ClientHarness.panel;
     }
@@ -101,16 +103,37 @@ public final class CodexChatScreen extends GuiChat implements Surface {
             case Keyboard.KEY_X:
                 key = ChatPanel.Key.X;
                 break;
+            case Keyboard.KEY_Z:
+                key = ChatPanel.Key.Z;
+                break;
+            case Keyboard.KEY_Y:
+                key = ChatPanel.Key.Y;
+                break;
             default:
                 break;
         }
-        panel.key(key, character, isShiftKeyDown(), isCtrlKeyDown());
+        panel.key(
+                key,
+                ChatKeyboardInput.character(character, code, SEPARATE_TEXT_EVENTS),
+                isShiftKeyDown(),
+                isCtrlKeyDown());
     }
 
     protected void mouseClicked(int x, int y, int button) {
         if (!agent) {
-            if (button == 0 && x >= 4 && x < 74 && y >= height - 36 && y < height - 16) {
+            if (button == 0
+                    && x >= width - 51
+                    && x < width - 2
+                    && y >= height - 14
+                    && y < height - 2) {
                 agent = true;
+                if (ClientHarness.session != null)
+                    for (dev.minecraftharness.core.WorkspaceController.Chat chat :
+                            ClientHarness.session.chats())
+                        if (chat.needsAnswer()) {
+                            ClientHarness.session.select(chat);
+                            break;
+                        }
                 if (panel != null) panel.activated();
                 return;
             }
@@ -129,6 +152,9 @@ public final class CodexChatScreen extends GuiChat implements Surface {
         int x = Mouse.getEventX() * width / mc.displayWidth;
         int y = height - Mouse.getEventY() * height / mc.displayHeight - 1;
         if (Mouse.getEventButtonState()) mouseClicked(x, y, Mouse.getEventButton());
+        else if (panel != null && Mouse.getEventButton() == 0) panel.release();
+        if (panel != null && Mouse.isButtonDown(0))
+            panel.drag((int) (x / scale), (int) (y / scale));
         int wheel = Mouse.getEventDWheel();
         if (panel != null && wheel != 0) panel.scroll(wheel > 0 ? 1 : -1);
     }
@@ -136,8 +162,19 @@ public final class CodexChatScreen extends GuiChat implements Surface {
     public void drawScreen(int x, int y, float partialTicks) {
         if (!agent) {
             super.drawScreen(x, y, partialTicks);
-            drawRect(4, height - 36, 74, height - 16, 0xd0202428);
-            drawString(fontRendererObj, "Codex", 12, height - 30, 0x8fc9ff);
+            boolean hover = x >= width - 51 && x < width - 2 && y >= height - 14 && y < height - 2;
+            drawRect(width - 53, height - 14, width - 52, height - 2, 0x80555555);
+            if (hover) drawRect(width - 51, height - 14, width - 2, height - 2, 0x70555555);
+            boolean waiting =
+                    ClientHarness.session != null
+                            && ClientHarness.session.chats().stream()
+                                    .anyMatch(c -> c.needsAnswer());
+            drawString(
+                    fontRendererObj,
+                    waiting ? "Codex !" : "Codex",
+                    width - 47,
+                    height - 12,
+                    waiting ? 0xffcc66 : hover ? 0xffffff : 0xaaaaaa);
             return;
         }
         if (panel != ClientHarness.panel) panel = ClientHarness.panel;
@@ -148,6 +185,7 @@ public final class CodexChatScreen extends GuiChat implements Surface {
             return;
         }
         scale = Math.max(0.3f, mc.gameSettings.chatScale);
+        panel.pointer((int) (x / scale), (int) (y / scale));
         panel.opacity(mc.gameSettings.chatOpacity * 0.9f + 0.1f);
         GL11.glPushMatrix();
         GL11.glScalef(scale, scale, 1);
@@ -165,6 +203,22 @@ public final class CodexChatScreen extends GuiChat implements Surface {
 
     public int textWidth(String text) {
         return fontRendererObj.getStringWidth(text);
+    }
+
+    private String styled(String text, int style) {
+        return ((style & Surface.BOLD) != 0 ? "\u00a7l" : "")
+                + ((style & Surface.ITALIC) != 0 ? "\u00a7o" : "")
+                + ((style & Surface.STRIKETHROUGH) != 0 ? "\u00a7m" : "")
+                + text
+                + "\u00a7r";
+    }
+
+    public int textWidth(String text, int style) {
+        return fontRendererObj.getStringWidth(styled(text, style));
+    }
+
+    public void text(String text, int x, int y, int color, int style) {
+        text(styled(text, style), x, y, color);
     }
 
     public int lineHeight() {
@@ -236,6 +290,41 @@ public final class CodexChatScreen extends GuiChat implements Surface {
         }
         clips.push(box);
         applyClip(box);
+    }
+
+    public boolean custom(int left, int top, int w, int h, Runnable draw) {
+        int mode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glPushClientAttrib(GL11.GL_CLIENT_PIXEL_STORE_BIT | GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glPushMatrix();
+        GL11.glMatrixMode(GL11.GL_TEXTURE);
+        GL11.glPushMatrix();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glPushMatrix();
+        clip(left, top, left + w, top + h);
+        try {
+            int[] visible = clips.peek();
+            if (visible[2] <= visible[0] || visible[3] <= visible[1]) return true;
+            GL11.glDepthMask(true);
+            GL11.glClearDepth(1);
+            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            draw.run();
+            return true;
+        } finally {
+            unclip();
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_TEXTURE);
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(mode);
+            GL11.glPopClientAttrib();
+            GL11.glPopAttrib();
+        }
     }
 
     private void applyClip(int[] box) {
