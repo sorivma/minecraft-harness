@@ -66,3 +66,12 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
       - name: Verify portable modules
         run: ./gradlew.bat --no-daemon :agent-api:check :agent-codex:check :core:check :chat-ui:check --stacktrace
+      - name: Windows test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/test/
+          retention-days: 14
