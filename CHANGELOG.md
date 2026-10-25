@@ -2,6 +2,16 @@
 
 Changes are grouped by release. Versions follow [SemVer](VERSIONING.md).
 
+## [0.1.1] - 2026-10-25
+
+### Fixed
+- Preserve quoted configuration arguments when Java launches native Codex on Windows.
+  Previously the world trust override lost its quotes, causing Codex to exit with
+  `invalid type ... expected a map in projects` and Harness to report
+  `Codex process disconnected` before initialization.
+- Cover the actual child-process argument boundary with a regression test, including
+  spaced, dotted and Unicode world paths, apostrophes and escaped backslashes.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added
@@ -18,4 +28,5 @@ Changes are grouped by release. Versions follow [SemVer](VERSIONING.md).
 - Credential redaction for MCP headers, API keys, token variants and environment maps.
 - Build, mod metadata and backend identity now use one release version.
 
+[0.1.1]: https://github.com/sorivma/minecraft-harness/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sorivma/minecraft-harness/releases/tag/v0.1.0
