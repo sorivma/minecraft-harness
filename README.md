@@ -80,7 +80,7 @@ flowchart LR
 
 ## Build
 
-Use a full **JDK 17 or 21** for Gradle 8.8. Java 8 is the compilation/test toolchain; the native-argument regression launches a Java 21 helper for Unicode-safe Windows arguments. Gradle's Foojay resolver can provision both toolchains. No game, Codex account or API key is needed for the automated checks.
+Use a full **JDK 17 or 21** for Gradle 8.8. Java 8 is the compilation/test toolchain; Gradle's Foojay resolver can provision it. The Windows native-argument regression uses the OS .NET Framework compiler for its Unicode-safe helper. No game, Codex account or API key is needed for the automated checks.
 
 ```sh
 ./gradlew --no-daemon spotlessCheck check build releaseBundle

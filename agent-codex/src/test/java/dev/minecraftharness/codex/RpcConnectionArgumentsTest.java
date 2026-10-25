@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import com.google.gson.*;
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.*;
@@ -36,14 +37,7 @@ public class RpcConnectionArgumentsTest {
                         CodexWorkspaceConfig.command("codex", workspace).subList(1, 6));
         expected.add("quoted=\"C:\\folder with spaces\\\"");
         expected.add("literal=\\\"embedded\\\"");
-        String cp = location(EchoArguments.class) + File.pathSeparator + location(JsonObject.class);
-        List<String> command =
-                new ArrayList<String>(
-                        Arrays.asList(
-                                System.getProperty("harness.test.nativeJava"),
-                                "-cp",
-                                cp,
-                                EchoArguments.class.getName()));
+        List<String> command = echoCommand();
         command.addAll(expected);
         CompletableFuture<JsonObject> reply = new CompletableFuture<JsonObject>();
         try (RpcConnection rpc = new RpcConnection(command, workspace)) {
@@ -64,6 +58,48 @@ public class RpcConnectionArgumentsTest {
             for (int i = 0; i < expected.size(); i++)
                 assertEquals(expected.get(i), actual.get(i).getAsString());
         }
+    }
+
+    private List<String> echoCommand() throws Exception {
+        if (File.separatorChar == '\\') {
+            File source = temporary.newFile("NativeArguments.cs");
+            try (InputStream input = getClass().getResourceAsStream("/NativeArguments.cs")) {
+                Files.copy(
+                        input, source.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            File executable = new File(temporary.getRoot(), "NativeArguments.exe");
+            File compiler =
+                    new File(
+                            System.getenv("WINDIR"),
+                            "Microsoft.NET/Framework64/v4.0.30319/csc.exe");
+            if (!compiler.isFile())
+                compiler =
+                        new File(
+                                System.getenv("WINDIR"),
+                                "Microsoft.NET/Framework/v4.0.30319/csc.exe");
+            assertTrue(
+                    "Windows .NET Framework compiler is required for native argv regression",
+                    compiler.isFile());
+            Process compile =
+                    new ProcessBuilder(
+                                    compiler.getPath(),
+                                    "/nologo",
+                                    "/out:" + executable.getPath(),
+                                    source.getPath())
+                            .redirectErrorStream(true)
+                            .start();
+            assertTrue(
+                    "Native fixture compilation timed out", compile.waitFor(30, TimeUnit.SECONDS));
+            assertEquals("Native fixture compilation failed", 0, compile.exitValue());
+            return new ArrayList<String>(Collections.singletonList(executable.getPath()));
+        }
+        String cp = location(EchoArguments.class) + File.pathSeparator + location(JsonObject.class);
+        return new ArrayList<String>(
+                Arrays.asList(
+                        new File(System.getProperty("java.home"), "bin/java").getPath(),
+                        "-cp",
+                        cp,
+                        EchoArguments.class.getName()));
     }
 
     private static String location(Class<?> type) throws Exception {
