@@ -2,6 +2,7 @@ package dev.minecraftharness.codex;
 
 import static org.junit.Assert.*;
 
+import com.google.gson.JsonParser;
 import dev.minecraftharness.agent.McpServer;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +25,8 @@ public class CodexWorkspaceConfigTest {
 
     @Test
     public void createsConfigForEachNewWorldBeforeCodexStarts() throws Exception {
-        for (String name : Arrays.asList("first world", "second world")) {
+        for (String name :
+                Arrays.asList("first world", "second world", "forge-1.7.10 Debug WORLD")) {
             File workspace = temporary.newFolder(name);
             CodexWorkspaceConfig.write(
                     workspace,
@@ -37,8 +39,13 @@ public class CodexWorkspaceConfigTest {
             assertEquals("codex native.exe", command.get(0));
             assertEquals("app-server", command.get(1));
             assertEquals("--config", command.get(2));
-            assertTrue(command.get(3).startsWith("projects.\""));
-            assertTrue(command.get(3).endsWith(".trust_level=\"trusted\""));
+            String trust = command.get(3);
+            assertEquals("projects", trust.substring(0, trust.indexOf('=')));
+            assertTrue(trust.startsWith("projects={"));
+            String trusted = "={trust_level=\"trusted\"}}";
+            assertTrue(trust.endsWith(trusted));
+            String path = trust.substring("projects={".length(), trust.length() - trusted.length());
+            assertEquals(workspace.getCanonicalPath(), new JsonParser().parse(path).getAsString());
             assertEquals("project_root_markers=[]", command.get(5));
         }
     }

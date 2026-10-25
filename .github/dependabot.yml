@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    ignore:
+      # Keep Java 8 and the Minecraft-provided Gson ABI until explicitly migrated.
+      - dependency-name: org.commonmark:*
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: com.google.code.gson:gson
+        update-types: [version-update:semver-major, version-update:semver-minor]

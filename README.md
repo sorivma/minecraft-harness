@@ -1,138 +1,100 @@
-# Minecraft Harness
+<p align="center"><img src="docs/assets/cover.svg" alt="Minecraft Harness — your agent, inside your world" width="100%"></p>
 
-Клиентский интерфейс Codex в отдельной вкладке чата Minecraft Forge. Codex работает обычным локальным процессом `codex app-server`. Управление миром и чтение его состояния предоставляют отдельные MCP-моды, подключённые к Codex.
+<p align="center">
+<a href="https://github.com/sorivma/minecraft-harness/actions/workflows/ci.yml"><img alt="Build" src="https://github.com/sorivma/minecraft-harness/actions/workflows/ci.yml/badge.svg"></a>
+<a href="https://github.com/sorivma/minecraft-harness/releases"><img alt="Release" src="https://img.shields.io/github/v/release/sorivma/minecraft-harness?color=70d6b4"></a>
+<img alt="Minecraft 1.7.10" src="https://img.shields.io/badge/Minecraft-1.7.10-6f9c52">
+<img alt="Java 8 runtime" src="https://img.shields.io/badge/Java-8_runtime-c98a50">
+</p>
 
-## Рабочая область мира
+<p align="center"><b>A world-aware workspace for Codex, built into Minecraft chat.</b><br>
+<a href="#quick-start">Quick start</a> · <a href="docs/widget-api.md">Widget API</a> · <a href="docs/codex-coverage.md">Protocol coverage</a> · <a href="README.ru.md">Русский</a></p>
+
+Harness adds a separate **Codex** tab to the Minecraft Forge 1.7.10 chat. Conversations, approvals, plans, recipes and tool output stay beside the game. A local `codex app-server` process handles the agent; optional MCP mods expose game tools.
+
+## What you get
+
+| In your world | In your workflow |
+| --- | --- |
+| Chat and Codex tabs with separate drafts | Multiple conversations, queued followups and steering |
+| Markdown, recipe cards and planning widgets | Explicit approvals, questions, attachments and diffs |
+| Task activity HUD | Models, permissions, skills and MCP actions |
+| Mod-extensible widget renderer | A workspace tied to each local save |
+
+The implemented adapter is **Forge 1.7.10**, running on **Java 8**. The Codex adapter targets the checked-in **0.163.0** protocol fixtures; other CLI versions display a compatibility warning and need their own compatibility check. Multiplayer clients connected to a remote server are not supported. Local worlds and the host of a LAN world are supported.
+
+## Quick start
+
+1. Download `minecraft-harness-forge-1.7.10-0.1.0.jar` from the [release page](https://github.com/sorivma/minecraft-harness/releases/latest) and place it in your Forge client's `mods/` directory. The `-dev.jar` is for addon authors.
+2. Install and authenticate the native [Codex CLI](https://developers.openai.com/codex/cli/). If it is not on Minecraft's `PATH`, set `codex.executable` in `config/minecraftharness.cfg` to the native executable's absolute path. Shell wrappers such as `.cmd` are not supported.
+3. Open a local world, press **T**, choose **Codex**, and send a message. Harness starts the backend and creates a conversation on the first prompt.
+4. For game tools, install [Minecraft Agent Tools](https://github.com/sorivma/minecraft-agent-tools). Supporting mods advertise their MCP endpoint through [Forge IMC discovery](docs/mcp-discovery.md).
+
+Release assets include `SHA256SUMS`. From a directory containing all listed assets, run `sha256sum -c SHA256SUMS` on Linux or `shasum -a 256 -c SHA256SUMS` on macOS. On Windows, compare `Get-FileHash <file> -Algorithm SHA256` with its entry.
+
+## A workspace per save
 
 ```text
-.minecraft/saves/<реальная папка мира>/
+.minecraft/saves/Your World/
 ├── level.dat
 ├── region/
-├── DIM-1/
-└── codex-workspace/       ← cwd процесса Codex и его сессий
+└── codex-workspace/
+    ├── .codex/config.toml     # generated MCP block + your project settings
+    └── ...                    # files created in this world's workspace
 ```
 
-Папка создаётся автоматически внутри корня сейва. Название мира в интерфейсе и текущее измерение не участвуют в выборе пути. Все измерения одного мира используют одну рабочую область. Смена или закрытие мира завершает процесс Codex и очищает состояние интерфейса предыдущего мира. Первый запрос запускает процесс и создаёт диалог автоматически; `/connect` доступен для явного переподключения.
+Dimensions share the same workspace. Closing or switching worlds ends the old process and clears its UI state. Codex authentication remains in the user's existing installation. Harness defaults to `workspace-write` and `on-request`; approval prompts require an explicit answer. The workspace is a working directory and sandbox write scope, not a promise that all outside file reads are forbidden.
 
-Рабочая область — начальный каталог и область записи sandbox Codex, а не отдельная установка Codex. Авторизация и пользовательская конфигурация остаются у установленного Codex. Чтение файлов вне cwd определяется возможностями и политиками самого Codex.
+Only the `BEGIN HARNESS MCP` / `END HARNESS MCP` block is managed. Other settings and manually added servers are preserved. This generated file may contain MCP authorization headers: keep world workspaces private and remove credentials before sharing logs or saves. See [security and trust boundaries](SECURITY.md).
 
-При старте Harness опрашивает все загруженные моды через Forge IMC. MCP-моды,
-поддерживающие [общий контракт discovery v1](docs/mcp-discovery.md), сами сообщают
-URL, заголовки авторизации и таймауты. При открытии каждого мира Harness создаёт
-или обновляет `codex-workspace/.codex/config.toml` до запуска backend. MCP-host из
-соседнего `minecraft-agent-tools` поддерживает этот контракт; все установленные
-провайдеры инструментов доступны через один объявленный HTTP endpoint.
+## Controls
 
-Harness заменяет только блок между `# BEGIN HARNESS MCP` и `# END HARNESS MCP`.
-Серверы в нём имеют зарезервированные имена `harness_<modid>__<id>`; изменение
-порта/токена и удаление мода учитываются при следующем открытии мира. Остальные
-настройки и вручную подключённые серверы сохраняются. Обновляются моды обоих
-проектов: старый MCP-host без discovery по-прежнему требует ручной настройки.
+| Action | Control |
+| --- | --- |
+| Send / add a line | Enter / Shift+Enter |
+| Close a menu or chat while work continues | Escape |
+| Browse commands / complete one | `/`, arrow keys, Tab |
+| New / resume a conversation | `/new`, `/resume` |
+| Models / tools / extensions | `/model`, `/mcp`, `/skills`, `/plugins` |
+| Stop / queue / steer a task | `/stop`, `/queue`, `/steer` |
+| Full action catalog | `/commands` |
 
-Для процесса Codex Harness передаёт `projects.<workspace>.trust_level="trusted"`
-и `project_root_markers=[]` через `--config`: проектная конфигурация нового мира
-загружается без отдельного ручного доверия и поиска родительского репозитория.
-Эта настройка действует только на запускаемый процесс, пользовательский
-`~/.codex/config.toml` не изменяется. Формат и правила загрузки описаны в
-[официальной документации OpenAI](https://learn.chatgpt.com/docs/config-file/config-advanced).
+## For mod authors
 
-В multiplayer у клиентского мода нет доступа к папке сейва сервера. В текущем адаптере Codex доступен для локальных миров, включая мир, открытый по LAN на машине хоста. Удалённые сейвы потребуют отдельного решения; каталог сервера не подменяется локальной папкой.
+The four portable modules (`agent-api`, `core`, `chat-ui`, `agent-codex`) compile to Java 8. The Forge artifact embeds them and the Markdown parser. Addons can compile against the released **dev JAR** and register renderers through `HarnessWidgets.register`.
 
-## Состояние реализации
-
-- Модули: agent-api (контракт), agent-codex (локальный JSON-RPC), core (состояние мира/диалогов), chat-ui (переносимый интерфейс), forge-1.7.10 (игровой адаптер).
-- Первый адаптер: Forge 1.7.10, вкладки Chat / Codex, история ввода и прокрутка. Сообщения Codex не отправляются в игровой чат или серверу Minecraft.
-- Вход: `/login` либо `codex login` вне игры.
-- Реализованы несколько диалогов, фоновые задачи/очередь, модель/effort/tier, разрешения, вложения, rich flow, подтверждения, формы, review/diff и меню расширений. Покрытие Codex **0.163.0** и объяснённые внешние операции перечислены в [матрице команд](docs/codex-coverage.md).
-- MCP-формы поддерживают текст/secret, числа, boolean, enum/multiselect и вложенные группы. Неподдерживаемые ограничения схем и неизвестные обязательные запросы получают явную ошибку, без автоматического одобрения. Live microphone, terminal/IDE hosts и отдельные CLI maintenance-операции доступны через объяснённый внешний путь.
-
-Целевая совместимость — **все версии Forge начиная с 1.7.10**, отдельными артефактами для несовместимых API. Наличие общего ядра не означает готовую поддержку следующих версий. Проверку в запущенной игре нужно выполнять для каждого адаптера и совместно с модами, меняющими чат.
-
-## Сборка и запуск
-
-Gradle Wrapper 8.8 запускается на Java 17. Компиляция использует Java 8 toolchain, автоматически предоставляемый Foojay при отсутствии локального JDK. Для 1.7.10 используется RetroFuturaGradle.
-
-```powershell
-.\gradlew.bat spotlessCheck test :forge-1.7.10:build
-.\gradlew.bat :forge-1.7.10:runClient
+```mermaid
+flowchart LR
+    Player[Player] --> UI[Chat UI]
+    UI --> Core[World workspace]
+    Core --> API[Agent API]
+    API --> Codex[Codex backend]
+    Codex --> Process[Local app-server]
+    Process --> MCP[Optional MCP mods]
+    Forge[Forge 1.7.10 adapter] --> UI
 ```
 
-Каждый запуск `runClient` удаляет все миры из `forge-1.7.10/run/saves`
-(включая их `codex-workspace`) и автоматически открывает новый мир `Harness Test`.
-Это плоский мир без структур, с креативом, командами, постоянным полуднем,
-ясной погодой и без мобов, включая мирных животных. При обычной установке
-собранного мода этот режим не включается.
+- [Widget API and example](docs/widget-api.md) · [recipe widgets](docs/recipe-widgets.md) · [planning widgets](docs/planning-widgets.md)
+- [Porting and module boundaries](docs/porting.md) · [MCP discovery contract](docs/mcp-discovery.md)
+- [Activity, followups and questions](docs/agent-activity.md) · [Codex coverage](docs/codex-coverage.md)
 
-Форматирование Java и Gradle (для запуска нужен полный JDK 17 или 21):
+## Build
 
-```powershell
-.\gradlew.bat spotlessApply
+Use a full **JDK 17** for Gradle 8.8. Java 8 is the compilation/test toolchain; Gradle's Foojay resolver can provision it. No game, Codex account or API key is needed for the automated checks.
+
+```sh
+./gradlew --no-daemon spotlessCheck check build releaseBundle
+python scripts/prepare-release.py --version 0.1.0
 ```
 
-Вспомогательные скрипты форматируются закреплёнными версиями Prettier и Black:
+On Windows, use `gradlew.bat`. Output is collected in `build/release/`: the installable mod, dev JAR, portable libraries, sources and checksums. CI runs the full build on Linux and portable tests on Windows. Real GPU tests and in-game verification are separate, opt-in checks.
 
-```powershell
-npx --yes prettier@3.3.3 --write scripts/smoke-app-server.mjs
-uvx black==24.10.0 scripts/capture-codex-fixtures.py
-```
+**Development client:** `./gradlew :forge-1.7.10:runClient` resets all saves under `forge-1.7.10/run/saves` and creates a disposable test world. Keep personal worlds outside that directory. See the [Russian guide](README.ru.md) for detailed runtime behavior and [previous debugging notes](docs/first-version-debugging.md) for historical checks.
 
-Для проверки без изменений замените `spotlessApply` на `spotlessCheck`,
-`--write` на `--check` и добавьте `--check` к команде Black.
+## Contribute and release
 
-Готовый мод: `forge-1.7.10/build/libs/minecraft-harness-forge-1.7.10-0.1.0.jar`. Он проходит `reobfJar` при сборке. Файл с суффиксом `-dev.jar` предназначен для разработки.
+Read [CONTRIBUTING](CONTRIBUTING.md), [versioning and release policy](VERSIONING.md), and the [changelog](CHANGELOG.md). Related projects: [Minecraft Agent Tools](https://github.com/sorivma/minecraft-agent-tools) supplies MCP providers; [Mira](https://github.com/sorivma/mira) supplies task boards and optional integrations.
 
-Установите Codex CLI и выполните `codex login`. Если Minecraft не видит `codex` в PATH, укажите абсолютный путь к нативному исполняемому файлу в `config/minecraftharness.cfg`, параметр `codex.executable`. Обёртки `.cmd` не поддерживаются запуском без shell.
+Minecraft Harness is an independent community project and is not affiliated with Mojang, Microsoft or OpenAI. Bundled dependency attribution is in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES.md).
 
-В локальном мире откройте обычный чат клавишей T, нажмите Codex и введите запрос. Первый Enter подключает backend и создаёт диалог автоматически. Вкладки переключаются внутри того же игрового чата; текст обычного чата и агента разделён. Открытие через `/` сохраняет начало игровой команды.
-
-- Enter отправляет, Shift+Enter добавляет строку, Escape закрывает меню или чат без остановки задачи.
-- `/` открывает подсказки команд. ↑/↓ выбирают, Tab дополняет, Enter выполняет; Escape скрывает подсказки с сохранением ввода.
-- `/clear` или `/new` создаёт диалог; `/resume` выбирает сохранённый; `/model` открывает модели; `/mcp`, `/skills`, `/plugins` открывают соответствующие операции.
-- `/stop` останавливает задачу. При занятом диалоге Enter ставит сообщение в отменяемую очередь; `/queue` открывает очередь, `/steer` переключает режим уточнения текущей задачи.
-- `/commands` открывает весь каталог операций; `/mention` — вложения, `/export` и `/copy` — копирование. Длинные карточки открываются по нажатию; PageUp/PageDown читает детали, Copy all копирует полностью.
-- Подтверждения и вопросы требуют отдельного явного ответа; незавершённые запросы видны и в фоновых диалогах.
-- Chat возвращает обычный игровой ввод с сохранением его черновика. Expand разворачивает панель внутри области чата.
-
-Промпты запускаются с `workspace-write` и `on-request`; автоматического разрешения действий нет. Историю хранит Codex, локальные черновики — workspace мира. `/cd` и `/worktree` исключены из паритета: рабочая область всегда привязана к миру.
-
-Для первой версии пользователь разрешил самостоятельную отладку в игре. Исправлен конфликт параллельных загрузчиков OpenAL в Minecraft 1.7.10: встроенный coremod ожидает завершения загрузчика звука при перезагрузке ресурсов. Звук остаётся включённым; загрузка ресурсов может ждать аудиоинициализацию. Совместимость с другими coremods, меняющими SoundManager, отдельно не подтверждена.
-
-Протокол: [официальная документация Codex App Server](https://developers.openai.com/codex/app-server). Сборка адаптера: [RetroFuturaGradle](https://github.com/GTNewHorizons/RetroFuturaGradle).
-
-Устройство модулей, подключение backend, перенос на другие Minecraft API и измерения headless UI: [руководство переноса](docs/porting.md). Результаты самостоятельной отладки первой версии: [журнал проверок](docs/first-version-debugging.md).
-
-Основной flow — CLI-подобный ввод внутри прежнего игрового UI; постоянной панели New/Model/Actions/Send/Stop нет. `/rename Новое название` принимает текст; `/model <фильтр>` и `/resume <фильтр>` открывают отфильтрованный выбор. Остальные команды открывают интерактивные операции без аргументов. Неизвестная команда остаётся в строке с ошибкой и не отправляется модели. Формы и подтверждения остаются контекстными.
-
-## Markdown в ответах
-
-Ответы отображаются с разбором CommonMark и расширений GFM: заголовки обоих
-видов, жирный текст, курсив, зачёркивание, вложенные списки и цитаты, чек-листы,
-разделители, встроенный код и блоки кода с обратными кавычками, тильдами или
-отступами. Экранирование, HTML-сущности и переносы строк поддерживаются.
-
-Таблицы рисуются ячейками с переносом текста и выравниванием столбцов. Если
-столбцы не помещаются, строки превращаются в записи с подписями полей.
-Работают обычные и ссылочные ссылки, автоматическое распознавание веб-адресов
-и текстовые сноски с продолжением на строках с отступом. Веб-ссылки открываются
-после подтверждения, включая ссылки внутри таблиц. Изображения показываются
-подписью и ссылкой; локальные пути остаются видимым текстом.
-
-HTML отображается текстом (встроенный `<br>` переносит строку), без исполнения.
-Графическая отрисовка LaTeX и Mermaid не включена: блоки `math`, `latex` и
-`mermaid` читаются как код. Подсветки синтаксиса кода нет. Просмотр деталей,
-копирование и экспорт сохраняют исходную разметку. Потоковые ответы допускают
-незакрытые блоки и незавершённые таблицы, которые переразбираются по мере поступления.
-
-## Widget extensions
-
-Other client mods can register their own display widgets through `HarnessWidgets.register`.
-See the [mod-author guide and energy-gauge example](docs/widget-api.md) and
-[crafting recipe widgets](docs/recipe-widgets.md).
-
-Built-in [planning widgets](docs/planning-widgets.md) add materials checklists,
-machine and shapeless recipes, crafting chains, build layer diagrams, item
-comparisons, production balances, waypoint cards, and progression checklists.
-Bruh can combine these into a build guide in one conversation reply.
-
-See [agent activity, followups and questions](docs/agent-activity.md) for the HUD,
-step-boundary followups, and the `ask_questions` tool.
+Licensed under [MIT](LICENSE).

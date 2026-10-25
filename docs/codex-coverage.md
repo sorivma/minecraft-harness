@@ -5,6 +5,11 @@ Wire evidence: generated schemas in `agent-codex/src/test/resources/protocol/0.1
 Cross-check: [official command reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
 and [App Server](https://learn.chatgpt.com/docs/app-server).
 
+Other reported versions produce a warning without blocking connection or closing
+the app-server process. The warning is retained in `/warnings`, including during
+initialization. This does not establish protocol compatibility with those versions;
+actual RPC failures still surface normally.
+
 Audit completed against the pinned executable on 2026-10-19. The saved
 [capture](codex-cli-0.163.0-help.txt) includes 74 recursively discovered help pages;
 all invocations use `--help`. The TUI picker observation below and official reference

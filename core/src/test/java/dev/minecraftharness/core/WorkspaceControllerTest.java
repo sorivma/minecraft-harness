@@ -13,6 +13,37 @@ import org.junit.rules.TemporaryFolder;
 
 public class WorkspaceControllerTest {
     @Test
+    public void connectionWarningsAreRetainedBeforeReady() throws Exception {
+        FakeBackend b = new FakeBackend();
+        CompletableFuture<Connection> connected = new CompletableFuture<Connection>();
+        AgentBackend delayed =
+                (AgentBackend)
+                        java.lang.reflect.Proxy.newProxyInstance(
+                                AgentBackend.class.getClassLoader(),
+                                new Class<?>[] {AgentBackend.class},
+                                (proxy, method, args) -> {
+                                    Object result = method.invoke(b, args);
+                                    return method.getName().equals("connect") ? connected : result;
+                                });
+        WorkspaceController c = new WorkspaceController(temp.newFolder(), Arrays.asList(delayed));
+        try {
+            CompletableFuture<Connection> connecting = c.connect("fake");
+            b.emit(Event.connection(b.connection(), EventType.WARNING, "Version mismatch"));
+            drain(c);
+            assertFalse(connecting.isDone());
+            assertFalse(c.backend("fake").ready);
+            assertEquals("Version mismatch", c.notice);
+            assertEquals(Arrays.asList("Version mismatch"), c.warnings);
+            connected.complete(b.connection());
+            assertTrue(c.backend("fake").ready);
+            assertEquals("", c.backend("fake").error);
+            assertNotNull(await(c, c.create("fake")));
+        } finally {
+            c.close();
+        }
+    }
+
+    @Test
     public void followupDuringStartReachesRunningTurnWithoutWaitingForCompletion()
             throws Exception {
         FakeBackend b = new FakeBackend();

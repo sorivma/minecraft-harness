@@ -1,4 +1,7 @@
-plugins { id("com.diffplug.spotless") version "6.25.0" }
+plugins {
+    base
+    id("com.diffplug.spotless") version "6.25.0"
+}
 
 spotless {
     java {
@@ -13,7 +16,7 @@ spotless {
 
 allprojects {
     group = "dev.minecraftharness"
-    version = "0.1.0"
+    version = rootProject.providers.gradleProperty("version").get()
     repositories { mavenCentral() }
 }
 
@@ -92,6 +95,39 @@ val verifyArchitecture by
 
 subprojects {
     plugins.withId("java") {
+        extensions.configure<JavaPluginExtension> { withSourcesJar() }
+        tasks.withType<Jar>().configureEach {
+            isPreserveFileTimestamps = false
+            isReproducibleFileOrder = true
+            from(rootProject.file("LICENSE")) { into("META-INF") }
+            from(rootProject.file("THIRD_PARTY_NOTICES.md")) { into("META-INF") }
+        }
         tasks.named("check") { dependsOn(rootProject.tasks.named("verifyArchitecture")) }
     }
 }
+
+tasks.named("check") { dependsOn(subprojects.map { "${it.path}:check" }) }
+
+tasks.named("assemble") { dependsOn(subprojects.map { "${it.path}:assemble" }) }
+
+val releaseBundle by
+    tasks.registering(Sync::class) {
+        group = "distribution"
+        description = "Collect the runtime mod, developer API, portable libraries and source JARs."
+        dependsOn(tasks.named("assemble"))
+        into(layout.buildDirectory.dir("release"))
+        from("LICENSE", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "README.md")
+        from("docs/releases/${project.version}.md") { rename { "RELEASE_NOTES.md" } }
+        subprojects.forEach { module ->
+            val artifact =
+                if (module.name == "forge-1.7.10") "minecraft-harness-forge-1.7.10" else module.name
+            from(module.layout.buildDirectory.dir("libs")) {
+                include(
+                    "$artifact-${project.version}.jar",
+                    "$artifact-${project.version}-dev.jar",
+                    "$artifact-${project.version}-sources.jar"
+                )
+                exclude("*-test-fixtures*.jar")
+            }
+        }
+    }

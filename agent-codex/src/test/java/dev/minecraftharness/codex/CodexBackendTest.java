@@ -43,7 +43,9 @@ public class CodexBackendTest {
                 JsonObject p = Wire.object(message, "params"), r = new JsonObject();
                 if (!message.has("id")) continue;
                 if (method.equals("initialize"))
-                    r.addProperty("userAgent", "codex_cli_rs/0.163.0 (Windows)");
+                    r.addProperty(
+                            "userAgent",
+                            args.length == 0 ? "codex_cli_rs/0.163.0 (Windows)" : args[0]);
                 else if (method.equals("thread/start")
                         || method.equals("thread/resume")
                         || method.equals("thread/fork")) {
@@ -67,6 +69,23 @@ public class CodexBackendTest {
                     JsonObject turn = Wire.params("id", "turn-" + (++sends));
                     turn.addProperty("status", "inProgress");
                     r.add("turn", turn);
+                }
+                if (method.equals("config/read")) {
+                    JsonObject config = new JsonObject();
+                    for (String key :
+                            Arrays.asList(
+                                    "api_key",
+                                    "bearer_token",
+                                    "refresh_token",
+                                    "Authorization",
+                                    "Proxy-Authorization"))
+                        config.addProperty(key, "credential-" + key);
+                    config.add(
+                            "http_headers",
+                            Wire.params("X-Custom-Credential", "credential-header"));
+                    config.add("env", Wire.params("CUSTOM_CREDENTIAL", "credential-env"));
+                    config.addProperty("model", "fixture-model");
+                    r.add("config", config);
                 }
                 r.add("sentParams", message.get("params"));
                 r.addProperty("sentMethod", method);
@@ -162,6 +181,25 @@ public class CodexBackendTest {
     }
 
     @Test
+    public void configurationInspectionRedactsCredentialsIncludingCustomHeadersAndEnvironment()
+            throws Exception {
+        CodexBackend b = backend();
+        try {
+            BackendScenarios.await(b, b.connect(new File("."), e -> {}));
+            ActionResult result =
+                    BackendScenarios.await(
+                            b, b.act(null, "config", Collections.<String, Value>emptyMap()));
+            JsonObject config = Wire.json(result.fields.get("config")).getAsJsonObject();
+            assertEquals("fixture-model", config.get("model").getAsString());
+            assertFalse(config.toString().contains("credential-"));
+            assertEquals("[redacted]", config.get("http_headers").getAsString());
+            assertEquals("[redacted]", config.get("env").getAsString());
+        } finally {
+            b.close();
+        }
+    }
+
+    @Test
     public void dynamicQuestionsRoundTripThroughServerRequestAndExplicitAnswer() throws Exception {
         CodexBackend b = backend();
         List<Event> events = new ArrayList<Event>();
@@ -216,6 +254,10 @@ public class CodexBackendTest {
     }
 
     CodexBackend backend() throws Exception {
+        return backend("codex_cli_rs/0.163.0 (Windows)");
+    }
+
+    private CodexBackend backend(String userAgent) throws Exception {
         String path =
                 location(CodexBackendTest.class)
                         + File.pathSeparator
@@ -229,7 +271,8 @@ public class CodexBackendTest {
                         new File(System.getProperty("java.home"), "bin/java").getPath(),
                         "-cp",
                         path,
-                        ReplayServer.class.getName()));
+                        ReplayServer.class.getName(),
+                        userAgent));
     }
 
     private static String location(Class<?> type) throws Exception {
@@ -239,6 +282,34 @@ public class CodexBackendTest {
     @Test
     public void sharedLifecycleContract() throws Exception {
         BackendScenarios.lifecycle(backend(), new File("."));
+    }
+
+    @Test
+    public void versionMismatchWarnsWithoutBlockingConversation() throws Exception {
+        String userAgent =
+                "minecraft_harness/0.164.0 (Windows 10.0.26200; x86_64) unknown"
+                        + " (minecraft_harness; 0.2.0)";
+        CodexBackend b = backend(userAgent);
+        List<Event> events = new ArrayList<Event>();
+        try {
+            Connection connection =
+                    BackendScenarios.await(b, b.connect(new File("."), events::add));
+            assertEquals(connection, b.connection());
+            assertEquals(1, events.stream().filter(e -> e.type == EventType.WARNING).count());
+            Event warning =
+                    events.stream().filter(e -> e.type == EventType.WARNING).findFirst().get();
+            assertEquals(connection, warning.connection);
+            assertTrue(warning.message.contains("0.163.0"));
+            assertTrue(warning.message.contains(userAgent));
+            Conversation chat = BackendScenarios.await(b, b.create(Settings.defaults()));
+            Turn turn =
+                    BackendScenarios.await(
+                            b, b.send(chat.key, new Message("hello"), Settings.defaults()));
+            assertNotNull(turn);
+            assertFalse(events.stream().anyMatch(e -> e.type == EventType.DISCONNECTED));
+        } finally {
+            b.close();
+        }
     }
 
     @Test

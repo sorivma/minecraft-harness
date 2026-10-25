@@ -561,15 +561,17 @@ public final class WorkspaceController implements Closeable {
                 }
             return;
         }
-        if (current == null || !state.ready) return;
-        if (e.type == EventType.CAPABILITIES_CHANGED) {
-            state.backend.capabilities().thenAccept(c -> state.capabilities = c);
-            return;
-        }
+        if (current == null) return;
+        // Connection diagnostics can arrive before connect() completes and marks us ready.
         if (e.type == EventType.WARNING) {
             notice = e.message;
             warnings.add(e.message);
             if (warnings.size() > 100) warnings.remove(0);
+            return;
+        }
+        if (!state.ready) return;
+        if (e.type == EventType.CAPABILITIES_CHANGED) {
+            state.backend.capabilities().thenAccept(c -> state.capabilities = c);
             return;
         }
         if (e.thread == null) return;

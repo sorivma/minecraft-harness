@@ -5,6 +5,8 @@ plugins {
 
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(8)) } }
 
+base { archivesName.set("minecraft-harness-forge-1.7.10") }
+
 minecraft { mcVersion.set("1.7.10") }
 
 dependencies {
@@ -15,6 +17,11 @@ dependencies {
 }
 
 tasks.withType<JavaCompile>().configureEach { options.encoding = "UTF-8" }
+
+tasks.processResources {
+    inputs.property("version", project.version)
+    filesMatching("mcmod.info") { expand("version" to project.version) }
+}
 
 tasks.jar {
     manifest.attributes(

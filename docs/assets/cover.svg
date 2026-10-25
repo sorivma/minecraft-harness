@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-labelledby="title desc">
+<title id="title">Minecraft Harness</title><desc id="desc">A green chat terminal connected to a cubic world, on a dark background.</desc>
+<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#25403d" stroke-width="1"/></pattern><linearGradient id="g"><stop stop-color="#0b1e1b"/><stop offset="1" stop-color="#112a27"/></linearGradient></defs>
+<rect width="1280" height="440" rx="18" fill="url(#g)"/><rect width="1280" height="440" rx="18" fill="url(#grid)" opacity=".45"/>
+<path d="M72 72h56v8H80v56h-8z" fill="#70d6b4"/><text x="104" y="108" fill="#70d6b4" font-family="monospace" font-size="17" letter-spacing="5">MINECRAFT / AGENTIC</text>
+<text x="72" y="207" fill="#f1f6ed" font-family="Segoe UI,Arial,sans-serif" font-size="70" font-weight="700">Minecraft Harness</text>
+<text x="76" y="258" fill="#a8c2b7" font-family="Segoe UI,Arial,sans-serif" font-size="27">Your agent. Inside your world.</text>
+<rect x="76" y="319" width="167" height="38" rx="5" fill="#25463e"/><text x="94" y="344" fill="#bfe7d5" font-family="monospace" font-size="16">FORGE 1.7.10</text>
+<text x="266" y="344" fill="#a8c2b7" font-family="monospace" font-size="16">CHAT · TOOLS · WORKSPACES</text>
+<g transform="translate(910 90)"><rect x="0" y="0" width="270" height="190" rx="12" fill="#0c1918" stroke="#40675a" stroke-width="2"/><path d="M0 39h270" stroke="#40675a"/><circle cx="21" cy="20" r="5" fill="#70d6b4"/><circle cx="39" cy="20" r="5" fill="#c19f60"/><circle cx="57" cy="20" r="5" fill="#677f72"/><text x="22" y="78" fill="#70d6b4" font-family="monospace" font-size="19">&gt; plan the next build</text><path d="M24 105h180M24 126h220M24 147h138" stroke="#426b5d" stroke-width="9"/><path d="M205 174v48l-35-32" fill="#0c1918" stroke="#40675a" stroke-width="2"/></g>
+<g transform="translate(1022 292)"><path d="M0 0l50-29 50 29-50 29z" fill="#8bc5a1"/><path d="M0 0v54l50 29V29z" fill="#426e53"/><path d="M50 29v54l50-29V0z" fill="#29563f"/><path d="M0 0l50 29 50-29M50 29v54" stroke="#c3edc5" fill="none" opacity=".5"/></g></svg>

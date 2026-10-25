@@ -91,7 +91,7 @@ public final class CodexBackend implements AgentBackend {
             rpc = new RpcConnection(command, cwd);
             JsonObject p = new JsonObject(), info = params("name", "minecraft_harness");
             info.addProperty("title", "Minecraft Harness");
-            info.addProperty("version", "0.2.0");
+            info.addProperty("version", BuildVersion.VERSION);
             p.add("clientInfo", info);
             JsonObject capabilities = new JsonObject();
             capabilities.addProperty("experimentalApi", true);
@@ -101,18 +101,6 @@ public final class CodexBackend implements AgentBackend {
                     .thenApply(
                             result -> {
                                 String userAgent = text(result, "userAgent");
-                                if (!userAgent.matches(
-                                        "(?s).*[/ ]"
-                                                + SUPPORTED_VERSION.replace(".", "\\.")
-                                                + "(?:[ /)].*|$)")) {
-                                    close();
-                                    throw new Failure(
-                                            Failure.Code.INCOMPATIBLE,
-                                            "Expected Codex "
-                                                    + SUPPORTED_VERSION
-                                                    + "; server reports "
-                                                    + userAgent);
-                                }
                                 try {
                                     rpc.notify("initialized", new JsonObject());
                                 } catch (IOException e) {
@@ -120,6 +108,19 @@ public final class CodexBackend implements AgentBackend {
                                     throw new Failure(Failure.Code.DISCONNECTED, e.getMessage());
                                 }
                                 ready = true;
+                                if (!userAgent.matches(
+                                        "(?s).*[/ ]"
+                                                + SUPPORTED_VERSION.replace(".", "\\.")
+                                                + "(?:[ /)].*|$)"))
+                                    emit(
+                                            Event.connection(
+                                                    expected,
+                                                    EventType.WARNING,
+                                                    "Expected Codex "
+                                                            + SUPPORTED_VERSION
+                                                            + "; server reports "
+                                                            + userAgent
+                                                            + ". Continuing; compatibility is not verified."));
                                 return expected;
                             });
         } catch (IOException e) {
@@ -948,15 +949,17 @@ public final class CodexBackend implements AgentBackend {
         if (value.isJsonObject()) {
             JsonObject out = new JsonObject();
             for (Map.Entry<String, JsonElement> e : value.getAsJsonObject().entrySet()) {
-                String key = e.getKey().toLowerCase(Locale.ROOT);
+                String key = e.getKey().toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
                 out.add(
                         e.getKey(),
                         key.contains("secret")
                                         || key.contains("password")
                                         || key.equals("apikey")
-                                        || key.equals("access_token")
-                                        || key.equals("accesstoken")
-                                        || key.contains("refreshtoken")
+                                        || key.contains("token")
+                                        || key.equals("authorization")
+                                        || key.equals("proxyauthorization")
+                                        || key.equals("httpheaders")
+                                        || key.equals("env")
                                 ? new JsonPrimitive("[redacted]")
                                 : redact(e.getValue()));
             }

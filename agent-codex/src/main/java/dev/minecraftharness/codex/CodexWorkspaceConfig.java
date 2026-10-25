@@ -92,11 +92,13 @@ public final class CodexWorkspaceConfig {
 
     /** Trust this world workspace for this process only, so its generated project config loads. */
     public static List<String> command(String executable, File workspace) throws IOException {
+        // CLI override keys split on dots, even inside quoted paths. Keep the path in
+        // the TOML value so dotted directories and Windows separators remain literal.
         return Arrays.asList(
                 executable,
                 "app-server",
                 "--config",
-                "projects." + quote(workspace.getCanonicalPath()) + ".trust_level=\"trusted\"",
+                "projects={" + quote(workspace.getCanonicalPath()) + "={trust_level=\"trusted\"}}",
                 "--config",
                 "project_root_markers=[]");
     }

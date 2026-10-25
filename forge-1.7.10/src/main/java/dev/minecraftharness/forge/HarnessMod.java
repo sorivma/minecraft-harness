@@ -12,7 +12,7 @@ import net.minecraftforge.common.config.Configuration;
 @Mod(
         modid = "minecraftharness",
         name = "Minecraft Harness",
-        version = "0.1.0",
+        version = dev.minecraftharness.agent.BuildVersion.VERSION,
         acceptableRemoteVersions = "*")
 public final class HarnessMod {
     @Mod.EventHandler

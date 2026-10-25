@@ -3,7 +3,7 @@
     "modid": "minecraftharness",
     "name": "Minecraft Harness",
     "description": "A local Codex session in a separate Minecraft chat tab.",
-    "version": "0.1.0",
+    "version": "${version}",
     "mcversion": "1.7.10",
     "clientSideOnly": true
   }

@@ -37,7 +37,7 @@ final class ExternalActions {
         add(
                 "update",
                 "Update Codex",
-                "Updating the executable requires stopping its running sessions. This release expects 0.163.0; newer versions require a compatibility check.",
+                "Updating the executable requires stopping its running sessions. This release targets 0.163.0; other versions connect with a compatibility warning.",
                 "codex update --help");
         add(
                 "doctor",
