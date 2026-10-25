@@ -34,9 +34,18 @@ tasks.jar {
     from(project(":chat-ui").sourceSets.main.get().output)
     // Ship the portable Markdown parser, its extensions, resources and license in the mod.
     from({
+        // Filter components before resolving files: RFG transforms of project JARs
+        // must not run while Gradle is still constructing the task graph.
         configurations.runtimeClasspath
             .get()
-            .filter { it.name.startsWith("commonmark-") || it.name.startsWith("autolink-") }
+            .incoming
+            .artifactView {
+                componentFilter { component ->
+                    component is org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+                        component.group in setOf("org.commonmark", "org.nibor.autolink")
+                }
+            }
+            .files
             .map { zipTree(it) }
     }) {
         exclude(

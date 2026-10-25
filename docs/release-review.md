@@ -9,6 +9,7 @@ Scope: the current repository, including previously uncommitted workspace-path a
 | Configuration inspection could display MCP authorization headers, custom header credentials, `api_key` and bearer/refresh token variants | Normalize credential keys; mask header/environment maps; add an isolated backend regression test |
 | The backend announced version 0.2.0 while the mod/build were 0.1.0 | Generate a shared `BuildVersion` from `gradle.properties`; expand mod metadata from the same value |
 | Builds had no release automation, complete artifact manifest or wrapper checksum | Add pinned CI/release workflows, artifact validation, deterministic archive/checksums and Gradle distribution checksum |
+| A clean checkout resolved RFG transforms of project JARs before those JARs were built | Filter external Markdown dependency components before resolving shaded library files |
 | Machine-local `.codex` backup was eligible for accidental publication | Ignore the entire local configuration directory and backup files |
 
 ## Verification
