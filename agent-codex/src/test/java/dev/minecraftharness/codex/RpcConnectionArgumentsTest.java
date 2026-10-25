@@ -40,7 +40,7 @@ public class RpcConnectionArgumentsTest {
         List<String> command =
                 new ArrayList<String>(
                         Arrays.asList(
-                                new File(System.getProperty("java.home"), "bin/java").getPath(),
+                                System.getProperty("harness.test.nativeJava"),
                                 "-cp",
                                 cp,
                                 EchoArguments.class.getName()));
