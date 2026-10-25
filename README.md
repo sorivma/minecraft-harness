@@ -25,7 +25,7 @@ The implemented adapter is **Forge 1.7.10**, running on **Java 8**. The Codex ad
 
 ## Quick start
 
-1. Download `minecraft-harness-forge-1.7.10-0.1.0.jar` from the [release page](https://github.com/sorivma/minecraft-harness/releases/latest) and place it in your Forge client's `mods/` directory. The `-dev.jar` is for addon authors.
+1. Download `minecraft-harness-forge-1.7.10-0.1.1.jar` from the [release page](https://github.com/sorivma/minecraft-harness/releases/latest) and place it in your Forge client's `mods/` directory. The `-dev.jar` is for addon authors.
 2. Install and authenticate the native [Codex CLI](https://developers.openai.com/codex/cli/). If it is not on Minecraft's `PATH`, set `codex.executable` in `config/minecraftharness.cfg` to the native executable's absolute path. Shell wrappers such as `.cmd` are not supported.
 3. Open a local world, press **T**, choose **Codex**, and send a message. Harness starts the backend and creates a conversation on the first prompt.
 4. For game tools, install [Minecraft Agent Tools](https://github.com/sorivma/minecraft-agent-tools). Supporting mods advertise their MCP endpoint through [Forge IMC discovery](docs/mcp-discovery.md).
@@ -80,11 +80,11 @@ flowchart LR
 
 ## Build
 
-Use a full **JDK 17** for Gradle 8.8. Java 8 is the compilation/test toolchain; Gradle's Foojay resolver can provision it. No game, Codex account or API key is needed for the automated checks.
+Use a full **JDK 17 or 21** for Gradle 8.8. Java 8 is the compilation/test toolchain; the native-argument regression launches a Java 21 helper for Unicode-safe Windows arguments. Gradle's Foojay resolver can provision both toolchains. No game, Codex account or API key is needed for the automated checks.
 
 ```sh
 ./gradlew --no-daemon spotlessCheck check build releaseBundle
-python scripts/prepare-release.py --version 0.1.0
+python scripts/prepare-release.py --version 0.1.1
 ```
 
 On Windows, use `gradlew.bat`. Output is collected in `build/release/`: the installable mod, dev JAR, portable libraries, sources and checksums. CI runs the full build on Linux and portable tests on Windows. Real GPU tests and in-game verification are separate, opt-in checks.

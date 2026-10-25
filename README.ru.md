@@ -81,7 +81,7 @@ uvx black==24.10.0 scripts/capture-codex-fixtures.py
 Для проверки без изменений замените `spotlessApply` на `spotlessCheck`,
 `--write` на `--check` и добавьте `--check` к команде Black.
 
-Готовый мод: `forge-1.7.10/build/libs/minecraft-harness-forge-1.7.10-0.1.0.jar`. Он проходит `reobfJar` при сборке. Файл с суффиксом `-dev.jar` предназначен для разработки.
+Готовый мод: `forge-1.7.10/build/libs/minecraft-harness-forge-1.7.10-0.1.1.jar`. Он проходит `reobfJar` при сборке. Файл с суффиксом `-dev.jar` предназначен для разработки.
 
 Установите Codex CLI и выполните `codex login`. Если Minecraft не видит `codex` в PATH, укажите абсолютный путь к нативному исполняемому файлу в `config/minecraftharness.cfg`, параметр `codex.executable`. Обёртки `.cmd` не поддерживаются запуском без shell.
 

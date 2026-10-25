@@ -4,7 +4,9 @@ Use small, focused pull requests with a concrete before/after description. Open 
 
 ## Development
 
-- Run Gradle with JDK 17; compile and test with its Java 8 toolchain.
+- Run Gradle with JDK 17 or 21; compile and test with its Java 8 toolchain.
+- The native-argument regression uses a Java 21 child process so Unicode arguments
+  are not narrowed by Java 8's Windows launcher. Foojay can provision this toolchain.
 - Format with `./gradlew spotlessApply`.
 - Verify with `./gradlew spotlessCheck check build releaseBundle`.
 - Keep Minecraft, Forge and LWJGL dependencies in `forge-1.7.10`; `verifyArchitecture` enforces the portable boundaries.
