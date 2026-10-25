@@ -25,10 +25,39 @@ public final class RpcConnection implements Closeable {
     private final List<Thread> readers = new ArrayList<Thread>();
 
     public RpcConnection(List<String> command, File cwd) throws IOException {
-        process = new ProcessBuilder(command).directory(cwd).start();
+        process = new ProcessBuilder(nativeCommand(command)).directory(cwd).start();
         writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream(), "UTF-8"));
         read(process.getInputStream(), false);
         read(process.getErrorStream(), true);
+    }
+
+    private static List<String> nativeCommand(List<String> command) {
+        if (File.separatorChar != '\\') return command;
+        List<String> escaped = new ArrayList<String>(command);
+        // ProcessBuilder preserves embedded quotes on Unix, but on Windows its
+        // command-line serializer treats them as syntax. Encode arguments that
+        // contain literal quotes for the native Windows argv parser ourselves.
+        // The executable remains separate; no shell or command wrapper is used.
+        for (int i = 1; i < escaped.size(); i++) {
+            String value = escaped.get(i);
+            if (value.indexOf('"') < 0) continue;
+            StringBuilder encoded = new StringBuilder("\"");
+            int slashes = 0;
+            for (int j = 0; j < value.length(); j++) {
+                char c = value.charAt(j);
+                if (c == '\\') {
+                    slashes++;
+                    continue;
+                }
+                int count = c == '"' ? slashes * 2 + 1 : slashes;
+                for (int k = 0; k < count; k++) encoded.append('\\');
+                encoded.append(c);
+                slashes = 0;
+            }
+            for (int k = 0; k < slashes * 2; k++) encoded.append('\\');
+            escaped.set(i, encoded.append('"').toString());
+        }
+        return escaped;
     }
 
     private void read(final InputStream stream, final boolean stderr) {

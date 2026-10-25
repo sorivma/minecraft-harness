@@ -4,7 +4,9 @@ Use small, focused pull requests with a concrete before/after description. Open 
 
 ## Development
 
-- Run Gradle with JDK 17; compile and test with its Java 8 toolchain.
+- Run Gradle with JDK 17 or 21; compile and test with its Java 8 toolchain.
+- The Windows native-argument regression uses the OS .NET Framework C# compiler
+  to create a Unicode-safe argv echo fixture; no game or Codex process is needed.
 - Format with `./gradlew spotlessApply`.
 - Verify with `./gradlew spotlessCheck check build releaseBundle`.
 - Keep Minecraft, Forge and LWJGL dependencies in `forge-1.7.10`; `verifyArchitecture` enforces the portable boundaries.

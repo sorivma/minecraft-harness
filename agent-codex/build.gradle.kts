@@ -10,3 +10,7 @@ dependencies {
 }
 
 tasks.withType<JavaCompile>().configureEach { options.encoding = "UTF-8" }
+
+tasks.test {
+    testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
